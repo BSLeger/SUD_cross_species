@@ -1,0 +1,33 @@
+---
+title: "sumstats_dd"
+author: "Montana Kay Lara"
+date: "2024-01-30"
+output: html_document
+---
+
+A. Packages
+```{r setup, results='hide', message=FALSE}
+library(GenomicSEM)
+library(here)
+```
+
+B. Directory setup
+```{r setup_dir}
+mlma_chr.dir <- here("munge_sumstats/mlma_files_wchr")
+ref.dir <- here("munge_sumstats/munge_refs")
+```
+
+C. run 'sumstats()'
+```{r}
+files <- list.files(mlma_chr.dir, full.names = TRUE)
+trait_names <- c("a_indiff0", "b_indiff2", "c_indiff4", "d_indiff8", "e_indiff16", "f_indiff24")
+se.logit <- c(F, F, F, F, F, F)
+allrefs <- list.files(ref.dir, full.names = TRUE)
+selected_ref <- allrefs[2]
+
+SUMSTATSoutput_dd <- sumstats(files=files, ref = selected_ref, trait.names = trait_names, se.logit = se.logit, maf.filter = 0)
+
+# Save the results
+save(SUMSTATSoutput_dd, file="SUMSTATSoutput_dd.RData")
+```
+

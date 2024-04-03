@@ -1,0 +1,37 @@
+---
+title: "commonfactor_dd"
+author: "Montana Kay Lara"
+date: "2024-01-30"
+output: html_document
+---
+
+A. Packages
+```{r setup, results='hide', message=FALSE}
+library(GenomicSEM)
+library(here)
+```
+
+B. Directory setup
+```{r setup_dir}
+ldsc_filepath <- here("LDSCoutput_dd.RData")
+sumstats_filepath <- here("SUMSTATSoutput_dd.RData")
+load(ldsc_filepath)
+load(sumstats_filepath)
+```
+
+C. run 'commonfactorGWAS()'
+```{r commonfactor}
+#run the multivariate GWAS using parallel processing
+pfactor <- commonfactorGWAS(covstruc = LDSCoutput, SNPs = SUMSTATSoutput_dd, estimation = "DWLS", cores = NULL, parallel = TRUE)
+```
+
+
+```{r}
+
+# Save the results as CSV
+output_path <- paste(results_dir, "/results_subset_", subset_number, ".csv", sep = "")
+write.csv(pfactor, file = output_path, row.names = FALSE)
+print(paste("Analysis for subset", subset_number, "completed and saved to", output_path))
+
+```
+
