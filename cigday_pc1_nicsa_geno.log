@@ -1,0 +1,13 @@
+Welcome to MAGMA v1.10 (linux/s)
+Using flags:
+	--annotate nonhuman window=10
+	--snp-loc cigday_pc1_pos.tsv
+	--gene-loc rn7.2_annotatedgenes_ncbi/rn7.2_gene_attribute_table_protein_coding_forMAGMA.tsv
+	--out cigday_pc1_nicsa_geno
+
+Start time is 17:13:37, Wednesday 22 May 2024
+
+
+ERROR - parsing arguments: file 'cigday_pc1_pos.tsv' specified in --snp-loc does not exist or is not a file.
+
+Terminating program.
