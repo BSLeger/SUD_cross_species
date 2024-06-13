@@ -3,12 +3,12 @@
 #SBATCH --partition condo
 #SBATCH --qos condo
 #SBATCH --nodes 1
-#SBATCH -a 5-6
+#SBATCH -a 1-6
 #SBATCH -c 1
 #SBATCH -t 8:00:00
 #SBATCH --mem-per-cpu 8G
-#SBATCH -o /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_sensitivity_loco-%j.o
-#SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_sensitivity_loco-%j.e
+#SBATCH -o /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_ext-%j.o
+#SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_ext-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
 #SBATCH --account csd795
