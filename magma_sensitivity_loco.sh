@@ -4,8 +4,8 @@
 #SBATCH --qos condo
 #SBATCH --nodes 1
 #SBATCH -a 1-6
-#SBATCH -c 1
-#SBATCH -t 8:00:00
+#SBATCH -c 2
+#SBATCH -t 100:00:00
 #SBATCH --mem-per-cpu 8G
 #SBATCH -o /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_ext-%j.o
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_ext-%j.e
@@ -17,7 +17,7 @@
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/magma
 
 # Modify the paths accordingly
-win_ls=( 0 1 5 10 25 50)
+win_ls=( 250 500 750)
 prefix="loco_meta"
 gene_loc_file="rn7.2_annotatedgenes_ncbi/rn7.2_gene_attribute_table_protein_coding_forMAGMA.tsv"
 N=8679
