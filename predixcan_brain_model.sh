@@ -3,7 +3,7 @@
 #SBATCH --partition condo
 #SBATCH --qos condo
 #SBATCH --nodes 1
-#SBATCH -a 1-6 
+#SBATCH -a 1-13 
 #SBATCH -c 4
 #SBATCH -t 2:00:00
 #SBATCH --mem-per-cpu 8G
@@ -13,17 +13,16 @@
 #SBATCH --mail-user bsleger@ucsd.edu
 #SBATCH --account csd795
 
-
 #cd /tscc/projects/ps-palmer/brittany/MetaXcan/GTEx/brain_models/
-#db_list=(`ls *.db`) #len=13 change back for rerun all
+db_list=(`ls *.db`) #len=13 change back for rerun all
 
-failed_rerun=( en_Brain_Caudate_basal_ganglia.db en_Brain_Cerebellar_Hemisphere.db en_Brain_Cerebellum.db en_Brain_Cortex.db en_Brain_Hypothalamus.db en_Brain_Putamen_basal_ganglia.db )
+#failed_rerun=( en_Brain_Caudate_basal_ganglia.db en_Brain_Cerebellar_Hemisphere.db en_Brain_Cerebellum.db en_Brain_Cortex.db en_Brain_Hypothalamus.db en_Brain_Putamen_basal_ganglia.db )
 
 cd /tscc/projects/ps-palmer/brittany/MetaXcan/
 source activate imlabtools
 
-#m=${db_list[$SLURM_ARRAY_TASK_ID-1]}
-m=${failed_rerun[$SLURM_ARRAY_TASK_ID-1]}
+m=${db_list[$SLURM_ARRAY_TASK_ID-1]}
+#m=${failed_rerun[$SLURM_ARRAY_TASK_ID-1]}
 echo $m
 
 software/SPrediXcan.py \
