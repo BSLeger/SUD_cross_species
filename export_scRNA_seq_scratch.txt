@@ -1,0 +1,92 @@
+#scratch from when I was testing different methods
+
+#version 1
+adata=sc.read_h5ad(f"scRNA_seq/{roi.replace(' ','-')}_combined.h5ad",backed='r')
+
+
+for group in groups:
+    group_data = adata[adata.obs['group'] == group, :].to_memory()  # Load only the group into memory
+
+    sc.pp.log1p(group_df)
+
+    group_df = group_data.to_df()
+    
+    # Calculate pseudobulk metrics for this group
+    mean = group_df.mean()
+    sum_ = group_df.sum()
+    std = group_df.std()
+    nonzero = (group_df > 0).sum()
+    count = group_df.count()
+    
+    # Write results to files
+    mean.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_mean_{group}.csv')
+    sum_.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_sum_{group}.csv')
+    std.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_stdev_{group}.csv')
+    nonzero.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_count_nonzero_{group}.csv')
+    count.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_count_{group}.csv')
+
+
+for group in groups:
+    group_data = adata[adata.obs['group'] == group, :].to_memory()  # Load only the group into memory
+    sc.pp.log1p(group_data)
+    group_df = group_data.to_df()
+
+    
+    # Calculate pseudobulk metrics for this group
+    mean = group_df.mean()
+    sum_ = group_df.sum()
+    std = group_df.std()
+    nonzero = (group_df > 0).sum()
+    count = group_df.count()
+    
+    # Write results to files
+    mean.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_mean_{group}.csv')
+    sum_.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_sum_{group}.csv')
+    std.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_stdev_{group}.csv')
+    nonzero.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_count_nonzero_{group}.csv')
+    count.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_count_{group}.csv')
+
+#version 2
+
+import os
+import h5py
+import scanpy as sc
+import pandas as pd
+import numpy as np
+import json
+import math
+import nexusformat.nexus as nx
+import anndata as ad
+import tracemalloc
+tracemalloc.start()
+
+file_path_neuron='scRNA_seq/Neurons.h5ad'
+file_path_nonneuron='scRNA_seq/Nonneurons.h5ad'
+
+adata_neuron = sc.read_h5ad(file_path_neuron,backed='r')
+adata_neuron.obs['group']=(adata_neuron.obs['ROIGroup'].astype(str)+'_Neuron').apply(lambda x: x.replace(' ','-'))
+adata_nonneuron=sc.read_h5ad(file_path_nonneuron,backed='r')
+adata_nonneuron.obs['group']=(adata_nonneuron.obs['ROIGroup'].astype(str)+'_'+adata_nonneuron.obs['supercluster_term'].astype(str)).apply(lambda x: x.replace(' ','-'))
+
+
+roi= 'Cerebral cortex'
+
+adata_nonneuron = adata_nonneuron[adata_nonneuron.obs['ROIGroup'] == roi, :]
+adata_neuron = adata_neuron[adata_neuron.obs['ROIGroup'] == roi, :] 
+ad_concat = ad.concat([adata_neuron,adata_nonneuron], merge="same")
+del(adata_neuron)
+del(adata_nonneuron)
+
+print(tracemalloc.get_traced_memory())
+
+
+sc.pp.filter_cells(ad_concat, min_genes=500)
+sc.pp.filter_genes(ad_concat, min_counts=10)
+sc.pp.normalize_total(ad_concat, target_sum=1e4, exclude_highly_expressed=False)
+sc.pp.log1p(ad_concat)
+print('writing roi data')
+ad_concat.to_df().groupby(ad_concat.obs['group']).mean().T.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_mean.csv')
+ad_concat.to_df().groupby(ad_concat.obs['group']).sum().T.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_sum.csv')
+ad_concat.to_df().groupby(ad_concat.obs['group']).std().T.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_stdev.csv')
+ad_concat.to_df().groupby(ad_concat.obs['group']).apply(lambda df: (df > 0).sum()).T.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_count_nonzero.csv')
+ad_concat.to_df().groupby(ad_concat.obs['group']).count().T.to_csv(f'scRNA_seq/processed/{roi}_pseudobulk_count.csv')
