@@ -6,7 +6,11 @@ import scipy.stats as stats
 from matplotlib_venn import venn2
 import scipy.stats as stats
 import networkx as nx
+import seaborn as sns
+from scipy.stats import norm
+import math
 
+from tqdm import tqdm
 
 IBM=['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000']
 colour_dict={
@@ -24,7 +28,11 @@ colour_dict={
 	'addict-rf':'#A8E5A0',
 	'addict-rf_alt':'#63AC00',
 	'shared_addict-rf':'#31739C',
-	'shared_alt_addict-rf':'#56B4E9'
+	'shared_alt_addict-rf':'#56B4E9',
+	'loco_final_cf':IBM[4],
+    'loco_final_cf_alt':IBM[3],
+	'loco_final_mega':IBM[4],
+    'loco_final_mega_alt':IBM[3],
 }
 
 def plt_scatter_NPS(tblr, tblc, tblr_label, tblc_label, tblr_seed, tblc_seed,
@@ -227,4 +235,170 @@ def venn_net(tblr, tblc, tblr_label, tblc_label, p_net_overlap,colour_r=colour_d
     plt.title('p='+str(p_net_overlap)+ ', single cut='+str(tblr_lim)+', comb cut='+str(comb_lim))
     if savefig:
         plt.savefig('figures/network_venn_'+tblr_label+'_'+tblc_label+'.svg',bbox_inches='tight')
+    plt.show()
+
+## Extensions to NetColoc from CrossSpeciesBMI github: https://github.com/sarah-n-wright/CrossSpeciesBMI --------------------------------------------------------------------
+
+def plot_permutation_histogram(permuted, observed, title="", xlabel="Observed vs Permuted", color='#CCCCCC', arrow_color="blue",savefig=False, filename=None):
+    """Plot an observed value against a distribution of permuted values. Adapted from BMI
+
+    Args:
+        permuted (list): A list of permuted values that form the distribution
+        observed (float): The observed value of interest
+        title (str): Plot title. Defaults to "".
+        xlabel (str): The x axis title. Defaults to "Observed vs Permuted".
+        color (str, optional): The color of the histogram. Defaults to "cornflowerblue".
+        arrow_color (str, optional): The color of the arrow pointing to observed value. Defaults to "red".
+    """
+    plt.figure(figsize=(4, 4))
+    dfig = sns.histplot(permuted, label='Permuted', alpha=0.4, stat='density', bins=25, kde=True, 
+                        edgecolor='w', color=color)
+    params = {'mathtext.default': 'regular'}          
+    plt.rcParams.update(params)
+    plt.xlabel(xlabel, fontsize=16)
+    diff = max(observed, max(permuted))-min(permuted)
+    plt.arrow(x=observed, y=dfig.dataLim.bounds[3]/2, dx=0, dy=-1 * dfig.dataLim.bounds[3]/2, label="Observed",
+              width=diff/100, head_width=diff/15, head_length=dfig.dataLim.bounds[3]/20, overhang=0.5, 
+              length_includes_head=True, color=arrow_color, zorder=50)
+    plt.ylabel("Density", fontsize=16)
+    plt.legend(fontsize=12, loc=(0.6,0.75))
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.locator_params(axis="y", nbins=6)
+    plt.title(title + " (p=" + str(get_p_from_permutation_results(observed, permuted)) + ")", fontsize=16)
+    
+    if savefig:
+        plt.savefig('figures/' + filename + '.svg', bbox_inches='tight')
+
+def get_p_from_permutation_results(observed, permuted):
+    """Calculates the significance of the observed mean relative to the empirical normal distribution of permuted means.
+
+    Args:
+        observed (float): The observed value to be tested
+        permuted (list): List of values that make up the expected distribution
+    
+    Returns:
+        float: p-value from z-test of observed value versus the permuted distribution
+    """
+    p = norm.sf((observed - np.mean(permuted)) / np.std(permuted))
+    try:
+        p = round(p, 4 - int(math.floor(math.log10(abs(p)))) - 1)
+    except ValueError:
+        print("Cannot round result, p=", p)
+    return p
+
+def calculate_mean_z_score_distribution(z1, z2, num_reps=1000, zero_double_negatives=True, 
+                                        overlap_control="remove", seed1=[], seed2=[]):
+    """Determines size of expected mean combined `z=z1*z2` by randomly shuffling gene names
+
+    Args:
+        z1 (pd.Series, pd.DataFrame): Vector of z-scores from network propagation of trait 1
+        z2 (pd.Series, pd.DataFrame): Vector of z-scores from network propagation of trait 2
+        num_reps (int): Number of perumation analyses to perform. Defaults to 1000
+        zero_double_negatives (bool, optional): Should genes that have a negative score in both `z1` and `z2` be ignored? Defaults to True.
+        overlap_control (str, optional): 'bin' to permute overlapping seed genes separately, 'remove' to not consider overlapping seed genes. Any other value will do nothing. Defaults to "remove".
+        seed1 (list, optional): List of seed genes used to generate `z1`. Required if `overlap_control!=None`. Defaults to [].
+        seed2 (list, optional): List of seed genes used to generate `z2`. Required if `overlap_control!=None`. Defaults to [].
+
+    Returns:
+        float: The observed mean combined z-score from network colocalization
+        list: List of permuted mean combined z-scores
+    """
+    if isinstance(z1, pd.Series):
+        z1 = pd.DataFrame(z1, columns=["z"])
+    if isinstance(z2, pd.Series):
+        z2 = pd.DataFrame(z2, columns=["z"])
+    z1z2 = z1.join(z2, lsuffix="1", rsuffix="2")
+    z1z2 = z1z2.assign(zz=z1z2.z1 * z1z2.z2)
+    #print(z1z2.head())
+    if overlap_control == "remove":
+        seed_overlap = list(set(seed1).intersection(set(seed2)))
+        print("Overlap seed genes:", len(seed_overlap))
+        z1z2.drop(seed_overlap, axis=0, inplace=True)
+    elif overlap_control == "bin":
+        seed_overlap = list(set(seed1).intersection(set(seed2)))
+        print("Overlap seed genes:", len(seed_overlap))
+        overlap_z1z2 = z1z2.loc[seed_overlap]
+        overlap_z1 = np.array(overlap_z1z2.z1)
+        z1z2.drop(seed_overlap, axis=0, inplace=True)
+    z1 = np.array(z1z2.z1)
+    z2 = np.array(z1z2.z2)
+    if zero_double_negatives:
+        for node in z1z2.index:
+            if (z1z2.loc[node].z1 < 0 and z1z2.loc[node].z2 < 0):
+                z1z2.loc[node, 'zz'] = 0
+    permutation_means = np.zeros(num_reps)
+    for i in tqdm(range(num_reps)):
+        perm_z1z2 = np.zeros(len(z1))
+        np.random.shuffle(z1)
+
+        for node in range(len(z1)):
+            if not zero_double_negatives or not (z1[node] < 0 and z2[node] < 0):
+                perm_z1z2[node] = z1[node] * z2[node]
+            else:
+                perm_z1z2[node] = 0
+        if overlap_control == "bin":
+            overlap_perm_z1z2 = np.zeros(len(overlap_z1))
+            np.random.shuffle(overlap_z1) 
+            for node in range(len(overlap_z1)):
+                if zero_double_negatives and (overlap_z1[node] < 0 and z2[node] < 0):
+                    overlap_perm_z1z2[node] = 0
+                else:
+                    overlap_perm_z1z2[node] = overlap_z1[node] * z2[node]
+            perm_z1z2 = np.concatenate([perm_z1z2, overlap_perm_z1z2])
+                    
+        permutation_means[i] = np.mean(perm_z1z2)
+    return np.mean(z1z2.zz), permutation_means
+
+def f_test(group1, group2):
+    """
+    Performs an F-test to compare the variances of two independent samples.
+
+    This function calculates the F-statistic to determine if there are any significant differences between the variances of two groups. 
+    The F-statistic is calculated as the ratio of the variances of the two groups. The function also computes the p-value associated with the 
+    F-statistic under the assumption that both groups are normally distributed.
+
+    Parameters:
+    - group1 (array-like): Numeric data representing the first group or sample.
+    - group2 (array-like): Numeric data representing the second group or sample.
+
+    Returns:
+    tuple:
+    - float: The computed F-statistic.
+    - float: The p-value corresponding to the F-statistic, derived from the F-distribution.
+    """
+    f = np.var(group1, ddof=1)/np.var(group2, ddof=1)
+    nun = np.array(group1).size-1
+    dun = np.array(group2).size-1
+    p_value = 1-stats.f.cdf(f, nun, dun)
+    return f, p_value
+########################################
+# from RCA_functions
+
+def NPS_lineplot(df,metric, filename, xrange=None, yrange=None, savefig=False, sigline=False):
+    df['-log10(p)']=-np.log10(df['empirical_p'])
+
+    # Group data by NPS_single and plot each group separately
+    groups = df.groupby('NPS_single')
+    
+    # Initialize a plot
+    fig, ax = plt.subplots(figsize=(5,5))
+    
+    # Plot lines for each NPS_single group
+    for name, group in groups:
+        ax.plot(group['NPS_common-rare'], group[metric], marker='o', label=f'NPS_single={name}')
+    if sigline:
+	    ax.axhline(y =-np.log10(0.05/len(df)), color = 'red', linestyle = 'dashed', linewidth=1)
+    if ~(yrange is None):
+        ax.set_ylim(yrange)
+    if ~(xrange is None):
+        ax.set_xlim(xrange)    
+    # Set plot labels
+    ax.set_xlabel('NPS combined') 
+    ax.set_ylabel(metric.replace('_',' '))
+    ax.legend(title='NPS single')
+    ax.grid(True)
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    if savefig:
+        plt.savefig('figures/'+filename,bbox_inches='tight')
     plt.show()

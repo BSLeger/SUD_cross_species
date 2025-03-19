@@ -20,12 +20,17 @@ file_dict={
     'ext':mag_dir+'ext_orig_annot.tsv',
     'ext_st22':mag_dir+'all_tests_ext1_st22_genes.csv',
     'loco_mega_fus_naac':'loco_twas_dan/loco_fusion_NACC_seed.tsv',
-    'ext_fus_naac':'ext_FUSION/ext_fusion_NACC_seed.tsv'
+    'ext_fus_naac':'ext_FUSION/ext_fusion_NACC_seed.tsv',
+	'loco_final_cf':mag_dir+'loco_final_cf_win10_annot.tsv',
+	'loco_final_mega':mag_dir+'loco_final_mega_win10_annot.tsv',
+
 }
 bonf_dict={
     'loco_gsem':2.650129856362962e-06,
     'loco':2.6389402016150313e-06,
 	'loco_mega_fus_naac':9.338812103100487e-06,
+	'loco_final_cf':2.635601707869907e-06,
+	'loco_final_mega':2.6467630088401888e-06
 }
 gene_col_dict={
     'loco':'HM_ORTHO',
@@ -33,7 +38,9 @@ gene_col_dict={
 	'loco_mega_fus_naac':'human_ortholog',
     'ext':'GENE',
 	'ext_fus_naac':'ID',
-	'ext_st22':'GENE NAME'
+	'ext_st22':'GENE NAME',
+	'loco_final_cf':'HM_ORTHO',
+	'loco_final_mega':'HM_ORTHO'
 }
 # define network cutoffs
 cut_single=1.5
@@ -178,23 +185,120 @@ def import_NPS_scores(seed_dict,UUIDs):
 
 def return_analysis_datasets(trait_r,cut_r,trait_h,cut_h,seed_dict,NPS_dict,interactome_name):
     #labels
-    if cut_h==None:
-        label_h=trait_h
-    else:
-        label_h=trait_h+'_'+cut_h
-    if cut_r==None:
-        label_r=trait_r
-    else:
-        label_r=trait_r+'_'+cut_r
+	if not (trait_h==None):
+	    if cut_h==None:
+	        label_h=trait_h
+	    else:
+	        label_h=trait_h+'_'+cut_h
+	    seed_h=seed_dict[label_h]
+	    NPS_h=NPS_dict[label_h+'_'+interactome_name]
+	else:
+		trait_h=None
+		label_h=None
+		cut_h=None
+		seed_h=None
+		NPS_h=None
+
+	if not (trait_r==None):
+	    if cut_r==None:
+	        label_r=trait_r
+	    else:
+	        label_r=trait_r+'_'+cut_r
+	    seed_r=seed_dict[label_r]
+	    NPS_r=NPS_dict[label_r+'_'+interactome_name]
+
+	else:
+		trait_r=None
+		label_r=None
+		cut_r=None
+		seed_r=None
+		NPS_r=None
     #seed genes
-    seed_r=seed_dict[label_r]
-    seed_h=seed_dict[label_h]
     #NPS scores
-    NPS_r=NPS_dict[label_r+'_'+interactome_name]
-    NPS_h=NPS_dict[label_h+'_'+interactome_name]
-    NPS = NPS_h.join(NPS_r, lsuffix="h", rsuffix="r")
-    NPS = NPS.assign(zhr=NPS.zh * NPS.zr)
-    return label_h,label_r,seed_h,seed_r,NPS_h,NPS_r,NPS
+	if ((trait_h!=None) and (trait_r!=None)):
+	    NPS = NPS_h.join(NPS_r, lsuffix="h", rsuffix="r")
+	    NPS = NPS.assign(zhr=NPS.zh * NPS.zr)
+	else:
+	    NPS=None
+	return label_h,label_r,seed_h,seed_r,NPS_h,NPS_r,NPS
+	
+def format_network(network, traitr, traitc, seedr, seedc,zr, zc):
+    """
+    Formats the colocalized network for easy secondary analysis in Cytoscape
+    This function takes a network (graph) and updates its nodes with several attributes:
+    - Seed gene indicators for two traits with secondary "color scheme" indicator for use in cytoscape color scheme assignment
+    - Z-scores for each trait and their combination
+
+    Parameters:
+    - network (NetworkX graph): The graph to be formatted, where nodes represent genes.
+    - traitr (str): Identifier for the rare trait.
+    - traitc (str): Identifier for the common trait.
+    - seedr (list): List of seed genes associated with the rare trait.
+    - seedc (list): List of seed genes associated with the common trait.
+    - zr (dict): Dictionary mapping genes to their z-scores for the rare trait.
+    - zc (dict): Dictionary mapping genes to their z-scores for the common trait.
+
+    Returns:
+    - NetworkX graph: The original network updated with node attributes for seed gene status and z-scores for traits and their combination.
+
+    Note:
+    The function utilizes pandas DataFrames for intermediate data manipulation and requires 
+    NetworkX for working with the network. It expects `network.nodes()` to return a list-like 
+    object of genes.
+    """
+    nodes_df=pd.DataFrame(network.nodes())
+    nodes_df.columns=['Gene']
+    #make node seed gene dataframe from which to make dictionaries
+    nodes_df[('seed_'+traitr)]=nodes_df['Gene'].isin(seedr)
+    nodes_df[('seed_'+traitc)]=nodes_df['Gene'].isin(seedc)
+    nodes_df['seed_both']=(nodes_df['Gene'].isin(seedr) & nodes_df['Gene'].isin(seedc))
+    
+    nodes_df['color_scheme']=0
+    nodes_df['color_scheme'] = np.where(nodes_df[('seed_'+traitr)] == True, 1, nodes_df['color_scheme'])
+    nodes_df['color_scheme'] = np.where(nodes_df[('seed_'+traitc)] == True, 2, nodes_df['color_scheme'])
+    nodes_df['color_scheme'] = np.where((nodes_df["seed_both"] == True), 3, nodes_df['color_scheme'])    
+    nodes_df.index=nodes_df['Gene']
+    #set zscores as node attributes
+    nx.set_node_attributes(network, dict(zr), ('z_'+traitr))
+    nx.set_node_attributes(network, dict(zc),('z_'+traitc))
+    nx.set_node_attributes(network, dict(zr*zc), 'z_comb')
+    #add seed genes as node attributes
+    nx.set_node_attributes(network,dict(zip(nodes_df['Gene'], nodes_df[('seed_'+traitr)])), ('seed_'+traitr))
+    nx.set_node_attributes(network,dict(zip(nodes_df['Gene'], nodes_df[('seed_'+traitc)])), ('seed_'+traitc))
+    nx.set_node_attributes(network,dict(zip(nodes_df['Gene'], nodes_df['seed_both'])), ('seed_both'))
+    nx.set_node_attributes(network,dict(zip(nodes_df['Gene'], nodes_df['color_scheme'])), ('seed_color_scheme'))
+    return(network)
+    
+def export_network(network, name, user, password, ndex_server='public.ndexbio.org'):
+    '''
+    shell for net_cx upload network function, that creates nicecx network, then exports to NDEx in the CX format.
+
+    This function converts a NetworkX graph to a NiceCXNetwork object using the ndex2 Python package,
+    sets the network's name, and uploads it to the specified NDEx server. Upon successful upload, 
+    the function returns the UUID of the network in the NDEx platform.
+
+    Parameters:
+    - network (NetworkX graph): The graph to be exported.
+    - name (str): The name to assign to the network in NDEx.
+    - user (str): NDEx account username.
+    - password (str): NDEx account password.
+    - ndex_server (str, optional): The URL of the NDEx server to which the network is to be uploaded. Defaults to 'public.ndexbio.org'.
+
+    Returns:
+    - exports network to NDEx
+    - str: The UUID of the uploaded network on NDEx.
+    Notes:
+    Tequires the ndex2 package. Ensure that you have a valid NDEx account and that the specified server URL is correct.
+    """
+    '''
+    print(user)
+    print(password)
+    if ((user==None) | (password==None)):
+        print('please provide a NDEx username and password.')
+    else:
+        net_cx = ndex2.create_nice_cx_from_networkx(network)
+        net_cx.set_name(name)
+        network_uuid = net_cx.upload_to(ndex_server, user, password)
 
 ## Utilities for systems map- from human rat bmi -------------------------------------------------------------
 def get_seed_gene_fractions(hier_df, seeds1, seeds2, seed1_name='h_seed', seed2_name='r_seed'):
