@@ -17,11 +17,15 @@ source activate env-std-py38
 
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/tissue_networks
 
-t='global'
+t='basal_ganglion'
 
-#prefix=https://s3-us-west-2.amazonaws.com/humanbase/networks/
+if [ ! -f "$prefix$t.gz" ]; then
+    echo "File not found- downloading from server"
+	prefix=https://s3-us-west-2.amazonaws.com/humanbase/networks/
+	wget "$prefix$t.gz"
 
-#wget "$prefix$t.gz"
+fi
+
 
 python ../scripts/format_tissue_network.py $t
 

@@ -32,7 +32,7 @@ colour_dict={
 	'loco_final_cf':IBM[4],
     'loco_final_cf_alt':IBM[3],
 	'loco_final_mega':IBM[4],
-    'loco_final_mega_alt':IBM[3],
+    'loco_final_mega_alt':IBM[3]
 }
 
 def plt_scatter_NPS(tblr, tblc, tblr_label, tblc_label, tblr_seed, tblc_seed,

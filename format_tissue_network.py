@@ -113,6 +113,7 @@ outdir='tissue_networks/intermediate/'
 print(f'file exists={os.path.exists(file_path)}')
 
 adj_matrix, node_index, degree, node_list = process_network_in_chunks(file_path)
+
 wp = normalize_adjacency_matrix(adj_matrix, node_index, degree, node_list, conserve_heat=True)
 
 print('writing the node list, adjacency matrix, and degree dictionary to file')

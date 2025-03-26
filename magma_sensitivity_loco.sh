@@ -3,9 +3,9 @@
 #SBATCH --partition condo
 #SBATCH --qos condo
 #SBATCH --nodes 1
-#SBATCH -a 1-3
+#SBATCH -a 1-8
 #SBATCH -c 4
-#SBATCH -t 150:00:00
+#SBATCH -t 25:00:00
 #SBATCH --mem-per-cpu 8G
 #SBATCH -o /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_ext_chr10-%j.o
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_ext_chr10-%j.e
@@ -17,11 +17,11 @@
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/magma
 
 # Modify the paths accordingly
-win_ls=( 500 1000)
-prefix="loco_meta"
+win_ls=( 0 1 5 10 25 50 100 250 )
+prefix="loco_final_cf"
 gene_loc_file="rn7.2_annotatedgenes_ncbi/rn7.2_gene_attribute_table_protein_coding_forMAGMA.tsv"
-N=8679
-rats="loco_meta_gwas_geno/genotypes"
+N=7679
+rats="genotypes_loco_final/genotypes"
 suffix=""
 
 win=${win_ls[$SLURM_ARRAY_TASK_ID-1]}

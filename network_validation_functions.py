@@ -177,7 +177,7 @@ def recurse_enrichment(par,graph,id_to_name, name_to_id,heirarchy_name,graph_df,
     '''
     if depth==None:
         depth=0
-    enr_tbl=pd.DataFrame(columns=['trait','parent_trait','community_genes','odds_ratio','log_se_or','p_intersect','depth'])
+    enr_tbl=pd.DataFrame(columns=['trait','parent_trait','community_genes','n_community_genes','odds_ratio','log_se_or','p_intersect','depth'])
 
     print(f"analyzing structure depth={depth}")
     '''
@@ -194,7 +194,7 @@ def recurse_enrichment(par,graph,id_to_name, name_to_id,heirarchy_name,graph_df,
             t=set(graph_df[graph_df[term_col].isin([name_to_id[x] for x in children])][gene_col].dropna())
             odds_ratio, log_se_or, p_intersect, gene_list= calculate_enrichment(t,coloc_dict_cat,p,sub_community,whole_community,verbose)
             if (len(gene_list)>0):
-                enr_tbl = pd.concat([pd.DataFrame([[p, heirarchy_name, gene_list, odds_ratio, log_se_or, p_intersect,depth]], columns=enr_tbl.columns), enr_tbl], ignore_index=True)
+                enr_tbl = pd.concat([pd.DataFrame([[p, heirarchy_name, gene_list, len(list(gene_list)),odds_ratio, log_se_or, p_intersect,depth]], columns=enr_tbl.columns), enr_tbl], ignore_index=True)
                 enr_tbl['depth']=depth
                 if len(enr_tbl)>0:
                     enr_tbl.to_csv(outpath,index=False)
@@ -209,14 +209,14 @@ def recurse_enrichment(par,graph,id_to_name, name_to_id,heirarchy_name,graph_df,
                 t=set(graph_df[graph_df[term_col].isin([name_to_id[x] for x in children])][gene_col].dropna())
                 odds_ratio, log_se_or, p_intersect, gene_list= calculate_enrichment(t,coloc_dict_cat,c,sub_community,whole_community,verbose)
                 if (len(gene_list)>0):
-                    enr_tbl = pd.concat([pd.DataFrame([[c, p, gene_list, odds_ratio, log_se_or, p_intersect,depth]], columns=enr_tbl.columns), enr_tbl], ignore_index=True)
+                    enr_tbl = pd.concat([pd.DataFrame([[c, p, gene_list,len(list(gene_list)), odds_ratio, log_se_or, p_intersect,depth]], columns=enr_tbl.columns), enr_tbl], ignore_index=True)
                     enr_tbl['depth']=depth
                 if len(enr_tbl)>0:
                     enr_tbl.to_csv(outpath,index=False,header=False,mode='a')
              
     children=set(enr_tbl['trait'])
     if enr_concat is None:
-        enr_concat = pd.DataFrame(columns=['trait', 'parent_trait', 'community_genes', 'odds_ratio', 'log_se_or', 'p_intersect', 'depth'])
+        enr_concat = pd.DataFrame(columns=['trait', 'parent_trait', 'community_genes', 'n_community_genes','odds_ratio', 'log_se_or', 'p_intersect', 'depth'])
     if not (enr_tbl.empty):
         enr_concat = pd.concat([enr_concat, enr_tbl])
     

@@ -11,7 +11,8 @@ UUIDs={
     'PCNet2.2':'8b4b54fa-e87d-11ee-9621-005056ae23aa',
 	'signor_rat':'76be57cd-afe8-11e9-8bb4-0ac135e8bacf',
 	'signor_human':'523fff27-afe8-11e9-8bb4-0ac135e8bacf',
-	'signor_mouse':'656370fa-afe8-11e9-8bb4-0ac135e8bacf'
+	'signor_mouse':'656370fa-afe8-11e9-8bb4-0ac135e8bacf',
+	'signor_rat_protein_only':'aa57a66c-0842-11f0-9806-005056ae3c32'
 }
 mag_dir='magma/seed_genes/'
 file_dict={
@@ -23,14 +24,20 @@ file_dict={
     'ext_fus_naac':'ext_FUSION/ext_fusion_NACC_seed.tsv',
 	'loco_final_cf':mag_dir+'loco_final_cf_win10_annot.tsv',
 	'loco_final_mega':mag_dir+'loco_final_mega_win10_annot.tsv',
-
+	'ext_rat':mag_dir+'ext_orig_annot_rat_ortho.tsv',
+	'loco_final_cf_rat':mag_dir+'loco_final_cf_win10_annot.tsv',
+	'ext_db':'ext_2factor/MAGMA_v108_DB_bonf.tsv',
+	'ext_rtb':'ext_2factor/MAGMA_v108_RTB_bonf.tsv'
 }
 bonf_dict={
     'loco_gsem':2.650129856362962e-06,
     'loco':2.6389402016150313e-06,
 	'loco_mega_fus_naac':9.338812103100487e-06,
 	'loco_final_cf':2.635601707869907e-06,
-	'loco_final_mega':2.6467630088401888e-06
+	'loco_final_mega':2.6467630088401888e-06,
+	'ext_rat':2.7003672499459928e-06,
+	'ext_db':2.75e-06,
+	'ext_rtb':2.75e-06
 }
 gene_col_dict={
     'loco':'HM_ORTHO',
@@ -40,7 +47,11 @@ gene_col_dict={
 	'ext_fus_naac':'ID',
 	'ext_st22':'GENE NAME',
 	'loco_final_cf':'HM_ORTHO',
-	'loco_final_mega':'HM_ORTHO'
+	'loco_final_mega':'HM_ORTHO',
+	'loco_final_cf_rat':'GENE',
+	'ext_rat':'Gene1Symbol',
+	'ext_db':'Gene symbol',
+	'ext_rtb':'Gene symbol'
 }
 # define network cutoffs
 cut_single=1.5
@@ -142,10 +153,13 @@ def import_seed_dict(mag_dir,file_dict,bonf_dict,gene_col_dict,all_nodes):
     for f in file_dict.keys():
         t=pd.read_csv(file_dict[f],sep='\t')
         gene_col=gene_col_dict[f]
+        #print('successfully read in file')
+        #print(t.head())
         if f in bonf_dict.keys():
             bonf_cutoff=bonf_dict[f]
         else:
             bonf_cutoff=0.05/len(t)
+        #print(f'bonferroni cuttoff ={bonf_cutoff}')
         if ('fus' in f):
             Pcol='TWAS.P'
         else:
@@ -162,7 +176,7 @@ def import_seed_dict(mag_dir,file_dict,bonf_dict,gene_col_dict,all_nodes):
     return seed_dict
 
 
-def import_NPS_scores(seed_dict,UUIDs):
+'''def import_NPS_scores(seed_dict,UUIDs):
     NPS_dict_series={}
     for k in seed_dict.keys():
         for u in UUIDs.keys():
@@ -180,8 +194,25 @@ def import_NPS_scores(seed_dict,UUIDs):
         t=t[1].squeeze()
         t = pd.DataFrame({'z':t})
         NPS_dict[k]=t
+    return NPS_dict, NPS_dict_series'''
+def import_NPS_scores(seed_dict,interactome_name):
+    NPS_dict_series={}
+    for k in seed_dict.keys():
+        p=('network_scores/'+k+'_'+interactome_name+'_zscore.tsv')
+        if os.path.isfile(p):
+            t=pd.read_csv('network_scores/'+k+'_'+interactome_name+'_zscore.tsv',header=None, sep='\t')
+            t.index=t[0]
+            t=t.drop(columns=[0])
+			#t=t[1].squeeze()
+			#t = pd.DataFrame({'z':t})
+            NPS_dict_series[k+'_'+interactome_name]=t
+    NPS_dict={}
+    for k in NPS_dict_series.keys():
+        t=NPS_dict_series[k]
+        t=t[1].squeeze()
+        t = pd.DataFrame({'z':t})
+        NPS_dict[k]=t
     return NPS_dict, NPS_dict_series
-
 
 def return_analysis_datasets(trait_r,cut_r,trait_h,cut_h,seed_dict,NPS_dict,interactome_name):
     #labels

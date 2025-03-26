@@ -3,7 +3,7 @@
 #SBATCH --partition condo
 #SBATCH --qos condo
 #SBATCH --nodes 1
-#SBATCH -a 1-38
+#SBATCH -a 2-38
 #SBATCH -c 4
 #SBATCH -t 2:00:00
 #SBATCH --mem-per-cpu 8G
@@ -17,7 +17,7 @@ source activate env-std-py38
 
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/tissue_networks
 
-brain_nervous_system=("basal_ganglion" "brain" "caudate_nucleus" "caudate_putamen" "central_nervous_system" "cerebellar_cortex" "cerebellum" "cerebral_cortex" "corpus_callosum" "corpus_striatum" "dentate_gyrus" "diencephalon" "forebrain" "frontal_lobe" "glia" "hippocampus" "hypophysis" "hypothalamus" "locus_ceruleus" "medulla_oblongata" "midbrain" "nervous_system" "neuron" "nucleus_accumbens" "occipital_lobe" "occipital_pole" "pons" "peripheral_nervous_system" "spinal_cord" "substantia_nigra" "subthalamic_nucleus" "telencephalon" "temporal_lobe" "thalamus")
+brain_nervous_system=("basal_ganglion" "brain" "caudate_nucleus" "caudate_putamen" "central_nervous_system" "cerebellar_cortex" "cerebellum" "cerebral_cortex" "corpus_callosum" "corpus_striatum" "dentate_gyrus" "diencephalon" "forebrain" "frontal_lobe" "glia" "hippocampus" "hypophysis" "hypothalamus" "locus_ceruleus" "medulla_oblongata" "midbrain" "nervous_system" "neuron" "nucleus_accumbens" "occipital_lobe" "occipital_pole" "pons" "peripheral_nervous_system" "spinal_cord" "substantia_nigra" "subthalamic_nucleus" "telencephalon" "temporal_lobe" "thalamus" )
 # "amygdala" removed 
 #adipose_tissue=("adipose_tissue")
 #adrenal_gland=("adrenal_cortex" "adrenal_gland")
@@ -30,7 +30,7 @@ brain_nervous_system=("basal_ganglion" "brain" "caudate_nucleus" "caudate_putame
 #lymphatic_system=("lymph_node" "spleen" "thymus" "tonsil")
 #muscular_system=("muscle" "skeletal_muscle" "smooth_muscle" "myometrium")
 #reproductive_system=("mammary_epithelium" "mammary_gland" "ovarian_follicle" "ovary" "oviduct" "spermatid" "spermatocyte" "spermatogonium" "testis" "uterine_cervix" "uterine_endometrium" "uterus")
-respiratory_system=("bronchial_epithelial_cell" "bronchus" "lung" "trachea")
+respiratory_system=("bronchial_epithelial_cell" "bronchus" "lung" "trachea" "global")
 #skin_related=("epidermis" "hair_follicle" "keratinocyte" "skin" "skin_fibroblast")
 #urinary_system=("kidney" "nephron" "podocyte" "renal_glomerulus" "renal_tubule" "urinary_bladder")
 #other=("culture_condition_CD8+_cell" "embryo" "fetus" "global" "tear_gland" "trophoblast" "umbilical_cord" "umbilical_vein_endothelial_cell" "uroepithelium")
@@ -39,11 +39,14 @@ respiratory_system=("bronchial_epithelial_cell" "bronchus" "lung" "trachea")
 a=( "${brain_nervous_system[@]}" "${respiratory_system[@]}" )
 echo ${#a[@]}
 
-t=${a[$SLURM_ARRAY_TASK_ID-1]}
+t="${a[$SLURM_ARRAY_TASK_ID-1]}_top"
 
-#prefix=https://s3-us-west-2.amazonaws.com/humanbase/networks/
+if [ ! -f "$prefix$t.gz" ]; then
+    echo "File not found- downloading from server"
+	prefix=https://s3-us-west-2.amazonaws.com/humanbase/networks/
+	wget "$prefix$t.gz"
 
-#wget "$prefix$t.gz"
+fi
 
 python ../scripts/format_tissue_network.py $t
 
