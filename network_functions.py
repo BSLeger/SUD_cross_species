@@ -14,7 +14,13 @@ UUIDs={
 	'signor_mouse':'656370fa-afe8-11e9-8bb4-0ac135e8bacf',
 	'signor_rat_protein_only':'aa57a66c-0842-11f0-9806-005056ae3c32'
 }
+ctrl_traits=['facial_hair', 'age_smkinit', 'antisoc', 'hr', 'infant_bw', 'LDL', 'maternal_smok', 'age_menarche','addict-rf','adhd', 'dpw', 'risk', 'auto_speed', 'nsex', 'bmi', 'height']
+
+ctrl_traits_rat=['bmi_rn6','body_length_rn6']
+
 mag_dir='magma/seed_genes/'
+
+ctrl_mag_dir='gwas_ctrl_hm/magma/seed_genes/'
 file_dict={
     'loco':mag_dir+'loco_win10_annot.tsv',
     'loco_gsem':mag_dir+'loco_gsem_annot.tsv',
@@ -27,7 +33,8 @@ file_dict={
 	'ext_rat':mag_dir+'ext_orig_annot_rat_ortho.tsv',
 	'loco_final_cf_rat':mag_dir+'loco_final_cf_win10_annot.tsv',
 	'ext_db':'ext_2factor/MAGMA_v108_DB_bonf.tsv',
-	'ext_rtb':'ext_2factor/MAGMA_v108_RTB_bonf.tsv'
+	'ext_rtb':'ext_2factor/MAGMA_v108_RTB_bonf.tsv',
+	'loco_final_cf_25':mag_dir+'loco_final_cf_win25_annot.tsv'
 }
 bonf_dict={
     'loco_gsem':2.650129856362962e-06,
@@ -37,7 +44,10 @@ bonf_dict={
 	'loco_final_mega':2.6467630088401888e-06,
 	'ext_rat':2.7003672499459928e-06,
 	'ext_db':2.75e-06,
-	'ext_rtb':2.75e-06
+	'ext_rtb':2.75e-06,
+	'loco_final_cf_25':2.6467630088401888e-06,
+	'body_length_rn6':2.8370403994552885e-06,
+	'bmi_rn6':2.8370403994552885e-06
 }
 gene_col_dict={
     'loco':'HM_ORTHO',
@@ -51,7 +61,10 @@ gene_col_dict={
 	'loco_final_cf_rat':'GENE',
 	'ext_rat':'Gene1Symbol',
 	'ext_db':'Gene symbol',
-	'ext_rtb':'Gene symbol'
+	'ext_rtb':'Gene symbol',
+	'loco_final_cf_25':'HM_ORTHO',
+	'hm_ctrl':'GENE',
+	'rat_ctrl':'HM_ORTHO'
 }
 # define network cutoffs
 cut_single=1.5
@@ -66,6 +79,25 @@ cut_hm_specific={
     'zh':3,
     'zhr':0
 }
+#from the original tissue dictionary
+rat_TWAS_tissue_label={'BLA':'Basolateral amygdala',
+'Brain':'Brain hemisphere',
+'IL':'Infralimbic cortex',
+'LHb':'Lateral habenula',
+'NAcc':'Nucleus accumbens core',
+'NAcc1':'Nucleus accumbens core 1',
+'NAcc2':'Nucleus accumbens core 2',
+'OFC':'Orbitofrontal cortex',
+'PL':'Prelimbic cortex',
+'PL1':'Prelimbic cortex 1',
+'PL2':'Prelimbic cortex 2',
+'Adipose':'Adipose',
+'Eye':'Eye',
+'Liver':'Liver',
+'AC':'Nucleus accumbens core',
+'LH':'Lateral habenula',
+'VO':'Orbitofrontal cortex'}
+
 def import_interactome(interactome_name=None, UUIDs=UUIDs,ndex_user=None, ndex_password=None, UUID=None):
     """
     Imports a gene interactome from the NDEx database and returns it as a NetworkX graph object.
@@ -147,7 +179,7 @@ def import_seedgenes(path,pcol='P',gene_col='GENE NAME',delim='comma', cutoff=No
 
 
 
-def import_seed_dict(mag_dir,file_dict,bonf_dict,gene_col_dict,all_nodes):
+def import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,bonf_dict,gene_col_dict,all_nodes):
     #written for MAGMA output- need to rewrite for fusion or ratXcan
     seed_dict={}
     for f in file_dict.keys():
@@ -173,6 +205,19 @@ def import_seed_dict(mag_dir,file_dict,bonf_dict,gene_col_dict,all_nodes):
                 seed_dict[f'{f}_FDR']=(set(t[t['Q']<0.05][gene_col]))
             except:
                 print(f'error occurred importing {f}')
+    for f in ctrl_traits:
+        gene_col=gene_col_dict['hm_ctrl']
+        t=pd.read_csv(f'{ctrl_mag_dir}{f}_annot.tsv',sep='\t')
+        seed_dict[f'{f}_FDR']=(set(t[t['Q']<0.05][gene_col]))
+        seed_dict[f'{f}_bonf']=(set(t[t['P']<(0.05/len(t))][gene_col]))
+        seed_dict[f'{f}_top500']=set(t[(t['GENE'].isin(all_nodes))].nsmallest(500,'P')[gene_col])
+    for f in ctrl_traits_rat:
+        gene_col=gene_col_dict['rat_ctrl']
+        t=pd.read_csv(f'{mag_dir}{f}_annot.tsv',sep='\t')
+        seed_dict[f'{f}_FDR']=(set(t[t['Q']<0.05][gene_col]))
+        seed_dict[f'{f}_bonf']=(set(t[t['P']<bonf_dict[f]][gene_col]))
+        seed_dict[f'{f}_top500']=set(t[(t[gene_col].isin(all_nodes))].nsmallest(500,'P')[gene_col])
+
     return seed_dict
 
 
@@ -331,7 +376,7 @@ def export_network(network, name, user, password, ndex_server='public.ndexbio.or
         net_cx.set_name(name)
         network_uuid = net_cx.upload_to(ndex_server, user, password)
 
-## Utilities for systems map- from human rat bmi -------------------------------------------------------------
+## Utilities for systems map- modified from human rat bmi -------------------------------------------------------------
 def get_seed_gene_fractions(hier_df, seeds1, seeds2, seed1_name='h_seed', seed2_name='r_seed'):
     """Assess the number of genes in each community that were seed genes from the orginal inputs
 
@@ -347,14 +392,77 @@ def get_seed_gene_fractions(hier_df, seeds1, seeds2, seed1_name='h_seed', seed2_
     """
     hier_df["CD_MemberList"] = hier_df.CD_MemberList.apply(lambda x: x if type(x)==list else x.split(" "))
     comm_genes = hier_df.explode("CD_MemberList")
-    comm_genes[seed1_name] = [1 if x in seeds1 else 0 for x in comm_genes.CD_MemberList]
-    comm_genes[seed2_name] = [1 if x in seeds2 else 0 for x in comm_genes.CD_MemberList]
-    comm_genes["overlap"] = comm_genes.apply(lambda x: x[seed1_name] * x[seed2_name], axis=1)
-    a = comm_genes.groupby(level=0).overlap.sum()
-    b = comm_genes[comm_genes.overlap != 1].groupby(level=0)[seed1_name].sum()
-    c = comm_genes[comm_genes.overlap != 1].groupby(level=0)[seed2_name].sum()
+    comm_genes[f'{seed1_name}_ratio'] = [1 if x in seeds1 else 0 for x in comm_genes.CD_MemberList]
+    comm_genes[f'{seed2_name}_ratio'] = [1 if x in seeds2 else 0 for x in comm_genes.CD_MemberList]
+    comm_genes["seed_hr_ratio"] = comm_genes.apply(lambda x: x[f'{seed1_name}_ratio'] * x[f'{seed2_name}_ratio'], axis=1)
+    a = comm_genes.groupby(level=0).seed_hr_ratio.sum()
+    b = comm_genes[comm_genes.seed_hr_ratio != 1].groupby(level=0)[f'{seed1_name}_ratio'].sum()
+    c = comm_genes[comm_genes.seed_hr_ratio != 1].groupby(level=0)[f'{seed2_name}_ratio'].sum()
     d = comm_genes.groupby(level=0).CD_MemberList.count()
     counts = pd.concat([a,b,c,d], axis=1)
-    counts["network"] = counts.apply(lambda x: x.CD_MemberList - x.overlap - x[seed1_name] - x[seed2_name], axis=1)
-    fracs = counts.div(counts.CD_MemberList, axis=0)
+    counts["network_ratio"] = counts.apply(lambda x: x.CD_MemberList - x.seed_hr_ratio - x[f'{seed1_name}_ratio'] - x[f'{seed2_name}_ratio'], axis=1)
+    fracs = counts.div(counts.CD_MemberList, axis=0)    
+    return fracs
+def get_gene_NPS_scores(hier_df,NPS_r,NPS_h,cut_r=1.5,cut_h=1.5,cut_hr=3):
+    hier_df["CD_MemberList"] = hier_df.CD_MemberList.apply(lambda x: x if type(x)==list else x.split(" "))
+    comm_genes = hier_df.explode("CD_MemberList")
+    comm_genes['NPSr']=comm_genes.CD_MemberList.apply(lambda x: NPS_r.z[x])
+    comm_genes['NPSh']=comm_genes.CD_MemberList.apply(lambda x: NPS_h.z[x])
+    comm_genes['NPShr']=comm_genes['NPSh']*comm_genes['NPSr']
+    
+    NPS=NPS_r.merge(NPS_h,left_index=True,right_index=True)
+    NPS.columns=['NPSr','NPSh']
+    NPS['NPShr']=NPS.NPSh*NPS.NPSr
+    netgenes=list(NPS[(NPS.NPSh>cut_h)&(NPS.NPSr>cut_r)&(NPS.NPShr>cut_hr)].index)
+    
+    #median
+    medr=comm_genes.groupby(level=0)['NPSr'].median()
+    medh=comm_genes.groupby(level=0)['NPSh'].median()
+    medhr=comm_genes.groupby(level=0)['NPShr'].median()
+    
+    #median_normalized
+    medr_n=comm_genes.groupby(level=0)['NPSr'].median()/NPS.NPSr[netgenes].median()
+    medh_n=comm_genes.groupby(level=0)['NPSh'].median()/NPS.NPSh[netgenes].median()
+    medhr_n=comm_genes.groupby(level=0)['NPShr'].median()/NPS.NPShr[netgenes].median()
+    
+    
+    meanr=comm_genes.groupby(level=0)['NPSr'].mean()
+    meanh=comm_genes.groupby(level=0)['NPSh'].mean()
+    meanhr=comm_genes.groupby(level=0)['NPShr'].mean()
+    
+    #mean_normalized
+    meanr_n=comm_genes.groupby(level=0)['NPSr'].mean()/NPS.NPSr[netgenes].mean()
+    meanh_n=comm_genes.groupby(level=0)['NPSh'].mean()/NPS.NPSh[netgenes].mean()
+    meanhr_n=comm_genes.groupby(level=0)['NPShr'].mean()/NPS.NPShr[netgenes].mean()
+    
+    c = pd.concat([medr,medh,medhr,medr_n,medh_n,medhr_n,meanr,meanh,meanhr,meanr_n,meanh_n,meanhr_n], axis=1)
+    c.columns=['medr','medh','medhr','medr_n','medh_n','medhr_n','meanr','meanh','meanhr','meanr_n','meanh_n','meanhr_n']
+    return c
+def get_expanded_network_gene_fractions(hier_df, hm_genes, rat_genes, coloc_genes, hm_genes_name='hm_net', rat_genes_name='rat_net', coloc_genes_name='coloc_net'):
+    """Assess the number of genes in each community that were from species-specific networks
+    Args:
+        hier_df (pd.DataFrame): The hierarchy information of gene communities
+        hm_genes (list): List of genes from input 1 (typically human network)
+        rat_genes (list): List of genes from input 2 (typically rat network)
+		coloc_genes (list): List of genes from input 2 (typically colocalized network)
+        hm_genes_name (str, optional): Name to give the seed genes from input 1. Defaults to 'hm_net'.
+        rat_genes_name (str, optional): Name to give the seed genes from input 2. Defaults to 'rat_net'.
+		coloc_genes_name (str,optional): Name to give the seed genes from input 3. Defaults to 'coloc_net'.
+
+    Returns:
+        pd.DataFrame: The fraction of genes in each community that are seeds in both hm_genes and rat_genes, the fraction just in hm_genes, the fraction just in rat_genes
+    """
+    hier_df["CD_MemberList"] = hier_df.CD_MemberList.apply(lambda x: x if type(x)==list else x.split(" "))
+    comm_genes = hier_df.explode("CD_MemberList")
+    
+    comm_genes[f'{hm_genes_name}_ratio'] = [1 if x in hm_genes else 0 for x in comm_genes.CD_MemberList]
+    comm_genes[f'{rat_genes_name}_ratio'] = [1 if x in rat_genes else 0 for x in comm_genes.CD_MemberList]
+    comm_genes[f'{coloc_genes_name}_ratio'] = [1 if x in coloc_genes else 0 for x in comm_genes.CD_MemberList]    
+    
+    a=comm_genes.groupby(level=0)[f'{hm_genes_name}_ratio'].sum()
+    b=comm_genes.groupby(level=0)[f'{rat_genes_name}_ratio'].sum()
+    c=comm_genes.groupby(level=0)[f'{coloc_genes_name}_ratio'].sum()
+    d=comm_genes.groupby(level=0).CD_MemberList.count()
+    counts=pd.concat([a,b,c,d], axis=1)
+    fracs=counts.div(counts.CD_MemberList, axis=0)    
     return fracs

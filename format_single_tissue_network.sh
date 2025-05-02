@@ -17,7 +17,7 @@ source activate env-std-py38
 
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/tissue_networks
 
-t='basal_ganglion'
+t='basal_ganglion_top'
 
 if [ ! -f "$prefix$t.gz" ]; then
     echo "File not found- downloading from server"

@@ -9,6 +9,9 @@ from scipy.stats import fisher_exact, hypergeom
 import scipy.stats as stats
 import numpy as np
 import itertools
+from scipy.stats import norm
+from statsmodels.stats import contingency_tables
+
 
 coloc_dict_ref={
     'seed_r':'magma_rat_ref',
@@ -31,18 +34,20 @@ def def_coloc_dict(seed_r,seed_h,NPS,all_nodes,cut_single,cut_comb,cut_rat_speci
     #filter for best match
     ortho=ortho[ortho['IsBestScore']=='Yes']
     gene_loc_file=pd.read_csv("magma/rn7.2_annotatedgenes_ncbi/rn7.2_gene_attribute_table_protein_coding_forMAGMA.tsv",sep='\t',header=None)
-    
+    net=list(NPS[(NPS.zh>cut_single)&(NPS.zr>cut_single)&(NPS.zhr>cut_comb)].index)
     coloc_dict={
         'seed_r':seed_r,
         'seed_h':seed_h,
         'seed_hr':list(set(seed_r).intersection(seed_h)),
-        'net':list(NPS[(NPS.zh>cut_single)&(NPS.zr>cut_single)&(NPS.zhr>cut_comb)].index),
+        'net':net,
         'graph':all_nodes,
         'magma_hm_ref':set(ref[5]),
         'magma_rat_ref':set(ortho[ortho['Gene1Symbol'].isin(gene_loc_file[0])]['Gene2Symbol']),
-        'hm_net':set(NPS[(NPS['zh'] > cut_hm_specific['zh']) & (NPS['zr'] < cut_hm_specific['zr']) &(NPS['zhr']<cut_hm_specific['zhr'])].index),
-        'rat_net':set(NPS[(NPS['zr'] > cut_rat_specific['zr']) & (NPS['zh'] < cut_rat_specific['zh']) &(NPS['zhr']<cut_rat_specific['zhr'])].index)
-    }
+		'hm_net':set(NPS[NPS['zh'] > cut_hm_specific['zh']].index).difference(net),
+        'rat_net':set(NPS[NPS['zr'] > cut_rat_specific['zr']].index).difference(net)}
+
+    '''	'hm_net':set(NPS[(NPS['zh'] > cut_hm_specific['zh']) & (NPS['zr'] < cut_hm_specific['zr']) &(NPS['zhr']  <cut_hm_specific['zhr'])].index),'rat_net':set(NPS[(NPS['zr'] > cut_rat_specific['zr']) & (NPS['zh'] < cut_rat_specific['zh']) &(NPS['zhr']<cut_rat_specific['zhr'])].index)
+    '''
     coloc_dict['magma_hm_rat_overlap_ref']=coloc_dict['magma_hm_ref'].intersection(coloc_dict['magma_rat_ref'])
     return coloc_dict
 
@@ -118,8 +123,48 @@ def return_ancestors_name(graph,id_to_name, term):
 
 
 # validation functions------------------------------------------
-
 def calculate_enrichment(t, coloc_dict_cat, k, sub='net', total='graph', verbose=True):
+    # modified from rare_common_alcohol
+    # Calculate enrichment for a group of genes (sub) versus all in larger group (total)
+    # Calculate values for the contingency table
+    M = len(coloc_dict_cat[total])  # Population size: genes in PCNet annotated in the GWAS catalog
+    n = len(coloc_dict_cat[total].intersection(t))  # Genes in PCNet annotated for the trait of interest
+    N = len(coloc_dict_cat[sub])  # Genes in the network annotated in the GWAS catalog
+    x = len(coloc_dict_cat[sub].intersection(t))  # Genes in network annotated for the trait of interest
+
+    # Build contingency table
+    contingency_table = [
+        [x, N - x],
+        [n - x, M - N - (n - x)]
+    ]
+    
+    # Perform Fisher's exact test
+    odds_ratio, p_intersect = stats.fisher_exact(contingency_table, alternative='greater')
+    gene_list = t.intersection(coloc_dict_cat[sub])
+    CT = contingency_tables.Table2x2(contingency_table)
+
+    OR_p_temp = CT.oddsratio_pvalue()
+    OR_CI_temp = CT.oddsratio_confint()
+    OR = CT.oddsratio
+
+    try:
+        se = np.sqrt(1/x + 1/(N-x) + 1/(n-x) + 1/(M - N - (n - x)))
+    except ZeroDivisionError:
+        se = None
+    
+    # Create the results dictionary
+    if verbose:
+        print(f"Enrichment of network nodes in genes in the GWAS catalog annotated for {k}: p={p_intersect}")
+        p_value_hypergeom = stats.hypergeom.sf(x-1, M, n, N)
+        print(f'Enrichment calculated using hypergeom.sf for {k}: p={p_value_hypergeom}, p_contingency_table={OR_p_temp}')
+        print(f"Odds ratio: OD={odds_ratio}, via_contingency OR={OR}")
+        print(f"Number of annotated genes in {total}: {len(t.intersection(coloc_dict_cat[total]))}")
+        print(f"Number of annotated genes in {sub}: {len(t.intersection(coloc_dict_cat[sub]))}\n")
+        print(f"Number of genes in interactome annotated for trait: {N}")
+    return odds_ratio, se, p_intersect, gene_list
+
+
+'''def calculate_enrichment(t, coloc_dict_cat, k, sub='net', total='graph', verbose=True):
     # modified from rare_common_alcohol
     # Calculate enrichment for a group of genes (sub) versus all in larger group (total)
     # Calculate values for the contingency table
@@ -151,7 +196,7 @@ def calculate_enrichment(t, coloc_dict_cat, k, sub='net', total='graph', verbose
         print(f"Odds ratio: OD={odds_ratio}")
         print(f"Number of annotated genes in {total}: {len(t.intersection(coloc_dict_cat[total]))}")
         print(f"Number of annotated genes in {sub}: {len(t.intersection(coloc_dict_cat[sub]))}\n")   
-    return odds_ratio, se, p_intersect, gene_list
+    return odds_ratio, se, p_intersect, gene_list'''
 
 
 def recurse_enrichment(par,graph,id_to_name, name_to_id,heirarchy_name,graph_df,term_col,gene_col,coloc_dict_cat,sub_community,whole_community,outpath=None,depth=0,depth_term=None,verbose=False,enr_concat=None):
@@ -234,3 +279,107 @@ def recurse_enrichment(par,graph,id_to_name, name_to_id,heirarchy_name,graph_df,
             print('returning concatenated enrichment table')
             print(enr_concat.head())
             return enr_concat
+
+## Extensions to NetColoc from CrossSpeciesBMI github: https://github.com/sarah-n-wright/CrossSpeciesBMI --------------------------------------------------------------------
+def calculate_mean_z_score_distribution(z1, z2, num_reps=1000, zero_double_negatives=True, 
+                                        overlap_control="remove", seed1=[], seed2=[]):
+    """Determines size of expected mean combined `z=z1*z2` by randomly shuffling gene names
+
+    Args:
+        z1 (pd.Series, pd.DataFrame): Vector of z-scores from network propagation of trait 1
+        z2 (pd.Series, pd.DataFrame): Vector of z-scores from network propagation of trait 2
+        num_reps (int): Number of perumation analyses to perform. Defaults to 1000
+        zero_double_negatives (bool, optional): Should genes that have a negative score in both `z1` and `z2` be ignored? Defaults to True.
+        overlap_control (str, optional): 'bin' to permute overlapping seed genes separately, 'remove' to not consider overlapping seed genes. Any other value will do nothing. Defaults to "remove".
+        seed1 (list, optional): List of seed genes used to generate `z1`. Required if `overlap_control!=None`. Defaults to [].
+        seed2 (list, optional): List of seed genes used to generate `z2`. Required if `overlap_control!=None`. Defaults to [].
+
+    Returns:
+        float: The observed mean combined z-score from network colocalization
+        list: List of permuted mean combined z-scores
+    """
+    #convert to correct format
+    if isinstance(z1, pd.Series):
+        z1 = pd.DataFrame(z1, columns=["z"])
+    if isinstance(z2, pd.Series):
+        z2 = pd.DataFrame(z2, columns=["z"])
+    #combine table
+    z1z2 = z1.join(z2, lsuffix="1", rsuffix="2")
+    z1z2 = z1z2.assign(zz=z1z2.z1 * z1z2.z2)
+    #print(z1z2.head())
+    if overlap_control == "remove":
+        seed_overlap = list(set(seed1).intersection(set(seed2)))
+        print("Overlap seed genes:", len(seed_overlap))
+        z1z2.drop(seed_overlap, axis=0, inplace=True)
+        
+    elif overlap_control == "bin":
+        seed_overlap = list(set(seed1).intersection(set(seed2)))
+        print("Overlap seed genes:", len(seed_overlap))
+        overlap_z1z2 = z1z2.loc[seed_overlap]
+        overlap_z1 = np.array(overlap_z1z2.z1)
+        z1z2.drop(seed_overlap, axis=0, inplace=True)
+    z1 = np.array(z1z2.z1)
+    z2 = np.array(z1z2.z2)
+
+    if z1z2.empty:
+        raise ValueError("All genes removed after overlap control. Cannot proceed.")
+
+    if zero_double_negatives:
+        for node in z1z2.index:
+            if (z1z2.loc[node].z1 < 0 and z1z2.loc[node].z2 < 0):
+                z1z2.loc[node, 'zz'] = 0
+
+
+    permutation_means = np.zeros(num_reps)
+    i = 0
+    while i < num_reps:
+        include=True
+        perm_z1z2 = np.zeros(len(z1))
+
+        #shuffle rat seed genes
+        np.random.shuffle(z1)
+        #calculate NPScombined after rat seed shuffle
+        for node in range(len(z1)):
+            if not zero_double_negatives or not (z1[node] < 0 and z2[node] < 0):
+                perm_z1z2[node] = z1[node] * z2[node]
+            else:
+                perm_z1z2[node] = 0
+        if (np.isnan(perm_z1z2).any()):
+            include=False
+        if overlap_control == "bin":
+            overlap_perm_z1z2 = np.zeros(len(overlap_z1))
+            np.random.shuffle(overlap_z1) 
+            for node in range(len(overlap_z1)):
+                if zero_double_negatives and (overlap_z1[node] < 0 and z2[node] < 0):
+                    overlap_perm_z1z2[node] = 0
+                else:
+                    overlap_perm_z1z2[node] = overlap_z1[node] * z2[node]
+            perm_z1z2 = np.concatenate([perm_z1z2, overlap_perm_z1z2])
+            if (np.isnan(perm_z1z2).any() or np.isnan(overlap_perm_z1z2).any()):
+                include=False
+                print('iteration skipped, value is NA')
+        if include:
+            permutation_means[i] = np.mean(perm_z1z2)
+            i+=1   
+                            
+    return np.mean(z1z2.zz), permutation_means
+def filter_go_annotations(go_df, term_min=10, term_max=5000, p_th=1e-5, min_intersection=3):
+    """Filters available annotations for a community based on specificity and significance.
+    Args:
+        go_df (pandas.DataFrame): All available significant GO terms for each community
+        term_min (int, optional):   The minimum size of a term to keep. Defaults to 50.
+        term_max (int, optional): The maximum size of a term to keep. Defaults to 1000.
+        p_th (float, optional): The significance threshold. Defaults to 1e-4.
+        min_intersection (int, optional): Minimum number of community terms annotated to the GO term. Defaults to 3.
+
+    Returns:
+        pandas.DataFrame: A filter dataframe of GO annotations per community, sorted by sum of precision and recall.
+    """
+    go_df = go_df[(go_df['term_size'] <= term_max) & (go_df['term_size'] >= term_min)]
+    go_df = go_df[go_df['intersection_size'] >= min_intersection]
+    go_df = go_df[go_df['p_value'] < p_th] # set a stringent pvalue threshold
+    go_df['sum_PR'] = go_df['recall'] + go_df['precision']
+    go_df = go_df.sort_values('sum_PR',ascending=False)
+    return go_df
+
+########################################

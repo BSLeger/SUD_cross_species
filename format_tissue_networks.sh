@@ -3,9 +3,9 @@
 #SBATCH --partition condo
 #SBATCH --qos condo
 #SBATCH --nodes 1
-#SBATCH -a 2-38
+#SBATCH -a 1-38
 #SBATCH -c 4
-#SBATCH -t 2:00:00
+#SBATCH -t 4:00:00
 #SBATCH --mem-per-cpu 8G
 #SBATCH -o /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/tissue_network_format-%j.o
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/tissue_network_format-%j.e

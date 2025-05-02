@@ -3,9 +3,9 @@
 #SBATCH --partition condo
 #SBATCH --qos condo
 #SBATCH --nodes 1
-#SBATCH -a 1-7
+#SBATCH -a 1-9
 #SBATCH -c 4
-#SBATCH -t 3:00:00
+#SBATCH -t 4:00:00
 #SBATCH --mem-per-cpu 8G
 #SBATCH -o /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/magma_hm_ctrl-%j.o
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/magma_hm_ctrl-%j.e
@@ -19,8 +19,8 @@ cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/magma
 # Modify the paths accordingly
 
 #file_ls=('facial_hair' 'age_smkinit' 'antisoc' 'friend_sat' 'hr' 'infant_bw' 'LDL' 'maternal_smok' 'townsend' 'age_menarche' 'neurot')
-file_ls=('age_menarche' '' 'facial_hair' 'friend_sat' 'hr' 'infant_bw' 'maternal_smok')
-
+#file_ls=('age_menarche' '' 'facial_hair' 'friend_sat' 'hr' 'infant_bw' 'maternal_smok')
+file_ls=('cud' 'adhd' 'alc_dep' 'dpw' 'risk' 'auto_speed' 'nsex' 'bmi' 'height')
 
 file=${file_ls[$SLURM_ARRAY_TASK_ID-1]}
 
