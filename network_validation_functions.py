@@ -1,8 +1,10 @@
 import os
 import pandas as pd
 import requests
-os.chdir('/tscc/projects/ps-palmer/brittany/ddot')
+import sys
+sys.path.append('/tscc/projects/ps-palmer/brittany/ddot')
 import ddot
+sys.path.remove('/tscc/projects/ps-palmer/brittany/ddot')
 import obonet as obo
 import networkx as nx
 from scipy.stats import fisher_exact, hypergeom
@@ -35,6 +37,7 @@ def def_coloc_dict(seed_r,seed_h,NPS,all_nodes,cut_single,cut_comb,cut_rat_speci
     ortho=ortho[ortho['IsBestScore']=='Yes']
     gene_loc_file=pd.read_csv("magma/rn7.2_annotatedgenes_ncbi/rn7.2_gene_attribute_table_protein_coding_forMAGMA.tsv",sep='\t',header=None)
     net=list(NPS[(NPS.zh>cut_single)&(NPS.zr>cut_single)&(NPS.zhr>cut_comb)].index)
+    outNet=NPS[~NPS.index.isin(net)]
     coloc_dict={
         'seed_r':seed_r,
         'seed_h':seed_h,
@@ -44,7 +47,9 @@ def def_coloc_dict(seed_r,seed_h,NPS,all_nodes,cut_single,cut_comb,cut_rat_speci
         'magma_hm_ref':set(ref[5]),
         'magma_rat_ref':set(ortho[ortho['Gene1Symbol'].isin(gene_loc_file[0])]['Gene2Symbol']),
 		'hm_net':set(NPS[NPS['zh'] > cut_hm_specific['zh']].index).difference(net),
-        'rat_net':set(NPS[NPS['zr'] > cut_rat_specific['zr']].index).difference(net)}
+        'rat_net':set(NPS[NPS['zr'] > cut_rat_specific['zr']].index).difference(net),
+        'hm_net_alt':set(outNet.sort_values('zh',ascending=False).head(len(net)).index),
+        'rat_net_alt':set(outNet.sort_values('zr',ascending=False).head(len(net)).index)}
 
     '''	'hm_net':set(NPS[(NPS['zh'] > cut_hm_specific['zh']) & (NPS['zr'] < cut_hm_specific['zr']) &(NPS['zhr']  <cut_hm_specific['zhr'])].index),'rat_net':set(NPS[(NPS['zr'] > cut_rat_specific['zr']) & (NPS['zh'] < cut_rat_specific['zh']) &(NPS['zhr']<cut_rat_specific['zhr'])].index)
     '''
@@ -381,5 +386,61 @@ def filter_go_annotations(go_df, term_min=10, term_max=5000, p_th=1e-5, min_inte
     go_df['sum_PR'] = go_df['recall'] + go_df['precision']
     go_df = go_df.sort_values('sum_PR',ascending=False)
     return go_df
+def format_catalog(catalog=None):
+	"""
+	From RCA FUNCTIONS
+	Processes and formats the GWAS catalog associations DataFrame by standardizing gene and trait names, 
+	filtering relevant entries, and organizing data for easier querying and analysis.
+
+	This function performs several operations to prepare GWAS catalog data for analysis:
+	1. Converts 'MAPPED_TRAIT' and 'DISEASE/TRAIT' to lowercase for consistent querying.
+	2. Filters out entries without mapped genes or traits.
+	3. Splits gene entries that contain multiple genes listed together.
+	4. Removes intergenic regions and entries labeled as 'mapped'.
+	5. Combines trait information into a single column with PubMed ID references.
+
+	Parameters:
+	- catalog (DataFrame): A pandas DataFrame containing GWAS catalog data. If not provided, the function attempts to process, but will likely fail silently within the try-except block.
+
+	Returns:
+	DataFrame: A formatted DataFrame with each gene associated with its traits and citations.
+
+	Raises:
+	- Prints an error message if the input catalog is None or processing fails due to other issues.
+
+	Notes:
+	- This function assumes the input DataFrame contains specific columns: 'MAPPED_GENE', 'REPORTED GENE(S)', 'MAPPED_TRAIT', 'DISEASE/TRAIT', and 'PUBMEDID'.
+	- The output DataFrame consolidates trait information into a single 'TRAIT' column and normalizes gene names.
+	"""
+	try:
+		#make all annotations lowercase for consistency for querying
+		catalog['MAPPED_TRAIT']=catalog['MAPPED_TRAIT'].str.lower()
+		catalog['DISEASE/TRAIT']=catalog['DISEASE/TRAIT'].str.lower()
+		#filter for genes that were mapped
+		mapped=catalog[~catalog['MAPPED_GENE'].isna()]
+		mapped=mapped[~mapped['MAPPED_TRAIT'].isna()]
+		mapped=mapped[['MAPPED_GENE','MAPPED_TRAIT','DISEASE/TRAIT','PUBMEDID']]
+		mapped.columns=['GENE','MAPPED_TRAIT','DISEASE/TRAIT','PUBMEDID']
+		#filter for genes that were reported
+		rep=catalog[~catalog['REPORTED GENE(S)'].isna()]
+		rep=rep[~rep['MAPPED_TRAIT'].isna()]
+		rep=rep[~rep['REPORTED GENE(S)'].str.contains('Intergenic')]
+		rep=rep[['REPORTED GENE(S)','MAPPED_TRAIT','DISEASE/TRAIT','PUBMEDID']]
+		rep.columns=['GENE','MAPPED_TRAIT','DISEASE/TRAIT','PUBMEDID']
+		cat=pd.concat([rep, mapped])
+		cat['GENE']=cat['GENE'].str.split('; ')
+		cat=cat.explode('GENE')
+		cat=cat[~(cat['GENE'].str.contains('mapped'))]
+		cat['GENE']=cat['GENE'].str.split(', ')
+		cat=cat.explode('GENE')
+		cat['GENE']=cat['GENE'].str.split(' - ')
+		cat=cat.explode('GENE')
+		cat['GENE']=cat['GENE'].astype('str')
+		cat=cat[~(cat['GENE'].str.contains('intergenic'))]
+		cat['TRAIT']=cat['MAPPED_TRAIT'] + ": " +cat['DISEASE/TRAIT']+ " (PMID: "+(cat['PUBMEDID'].astype(str))+")"
+		cat=cat.dropna()
+		return(cat)
+	except:
+		print('please add gwas catalog file.')
 
 ########################################

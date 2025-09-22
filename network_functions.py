@@ -6,21 +6,28 @@ import networkx as nx
 
 
 UUIDs={
-    'PCNet2.0':'d73d6357-e87b-11ee-9621-005056ae23aa',
-    'PCNet2.1':'e9c574f4-e87a-11ee-9621-005056ae23aa',
-    'PCNet2.2':'8b4b54fa-e87d-11ee-9621-005056ae23aa',
-	'signor_rat':'76be57cd-afe8-11e9-8bb4-0ac135e8bacf',
-	'signor_human':'523fff27-afe8-11e9-8bb4-0ac135e8bacf',
-	'signor_mouse':'656370fa-afe8-11e9-8bb4-0ac135e8bacf',
-	'signor_rat_protein_only':'aa57a66c-0842-11f0-9806-005056ae3c32'
+'PCNet2.0': 'd73d6357-e87b-11ee-9621-005056ae23aa',
+'PCNet2.1': 'e9c574f4-e87a-11ee-9621-005056ae23aa',
+'PCNet2.2': '8b4b54fa-e87d-11ee-9621-005056ae23aa',
+'HumanNetv3FN':'40913318-3a9c-11ed-ac45-0ac135e8bacf',
+'HumanNetv3XC':'8f929fb5-3ac6-11ed-b7d0-0ac135e8bacf',
+'STRING':'5f5da339-f14a-11ee-9621-005056ae23aa',
+'signor_rat': '76be57cd-afe8-11e9-8bb4-0ac135e8bacf',
+'signor_human': '523fff27-afe8-11e9-8bb4-0ac135e8bacf',
+'signor_mouse': '656370fa-afe8-11e9-8bb4-0ac135e8bacf',
 }
+
 ctrl_traits=['facial_hair', 'age_smkinit', 'antisoc', 'hr', 'infant_bw', 'LDL', 'maternal_smok', 'age_menarche','addict-rf','adhd', 'dpw', 'risk', 'auto_speed', 'nsex', 'bmi', 'height']
+
+psych_traits=['anxiety','panic', 'asd','adhd2022', 'scz', 'bipolar', 'dep', 'ptsd', 'ocd', 'alz', 'park', 'als','epilepsy', 'anorexia','park2019','bipolar_euro', 'dep_euro', 'ptsd_euro', 'epilepsy_euro']
 
 ctrl_traits_rat=['bmi_rn6','body_length_rn6']
 
 mag_dir='magma/seed_genes/'
 
 ctrl_mag_dir='gwas_ctrl_hm/magma/seed_genes/'
+psych_mag_dir='gwas_hm_psych/magma/seed_genes/'
+
 file_dict={
     'loco':mag_dir+'loco_win10_annot.tsv',
     'loco_gsem':mag_dir+'loco_gsem_annot.tsv',
@@ -35,6 +42,7 @@ file_dict={
 	'ext_db':'ext_2factor/MAGMA_v108_DB_bonf.tsv',
 	'ext_rtb':'ext_2factor/MAGMA_v108_RTB_bonf.tsv',
 	'loco_final_cf_25':mag_dir+'loco_final_cf_win25_annot.tsv'
+	
 }
 bonf_dict={
     'loco_gsem':2.650129856362962e-06,
@@ -179,7 +187,7 @@ def import_seedgenes(path,pcol='P',gene_col='GENE NAME',delim='comma', cutoff=No
 
 
 
-def import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,bonf_dict,gene_col_dict,all_nodes):
+def import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,psych_traits,bonf_dict,gene_col_dict,all_nodes):
     #written for MAGMA output- need to rewrite for fusion or ratXcan
     seed_dict={}
     for f in file_dict.keys():
@@ -211,6 +219,13 @@ def import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,bonf_dict,gen
         seed_dict[f'{f}_FDR']=(set(t[t['Q']<0.05][gene_col]))
         seed_dict[f'{f}_bonf']=(set(t[t['P']<(0.05/len(t))][gene_col]))
         seed_dict[f'{f}_top500']=set(t[(t['GENE'].isin(all_nodes))].nsmallest(500,'P')[gene_col])
+    for f in psych_traits:
+        gene_col=gene_col_dict['hm_ctrl']
+        t=pd.read_csv(f'{psych_mag_dir}{f}_annot.tsv',sep='\t')
+        seed_dict[f'{f}_FDR']=(set(t[t['Q']<0.05][gene_col]))
+        seed_dict[f'{f}_bonf']=(set(t[t['P']<(0.05/len(t))][gene_col]))
+        seed_dict[f'{f}_top500']=set(t[(t['GENE'].isin(all_nodes))].nsmallest(500,'P')[gene_col])
+
     for f in ctrl_traits_rat:
         gene_col=gene_col_dict['rat_ctrl']
         t=pd.read_csv(f'{mag_dir}{f}_annot.tsv',sep='\t')

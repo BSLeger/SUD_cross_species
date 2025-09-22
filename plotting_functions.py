@@ -38,7 +38,7 @@ colour_dict={
 }
 
 def plt_scatter_NPS(tblr, tblc, tblr_label, tblc_label, tblr_seed, tblc_seed,
-                    colour_r=colour_dict['loco'], colour_c=colour_dict['ext'], colour_shared=colour_dict['shared'],colour_nonseed=colour_dict['shared'],
+                    colour_r=colour_dict['loco'], colour_c=colour_dict['ext'], colour_shared=colour_dict['shared'],colour_nonseed=colour_dict['shared_alt'],
                     tblr_lim=1.5, tblc_lim=1.5, comb_lim=3, savefig=False, filename='scatter_NPS'):
     """
     Visualizes the NPScommon and NPSrare scores as a scatter plot with and without seed genes
@@ -62,7 +62,7 @@ def plt_scatter_NPS(tblr, tblc, tblr_label, tblc_label, tblr_seed, tblc_seed,
     Returns:
     None
     """
-    fig, [ax1, ax2] = plt.subplots(nrows=1, ncols=2, figsize=(12.5, 5))
+    fig, [ax1, ax2] = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
 
     # Combine zscore tables
     tbl_z = pd.concat([tblr, tblc], axis=1)
@@ -75,9 +75,9 @@ def plt_scatter_NPS(tblr, tblc, tblr_label, tblc_label, tblr_seed, tblc_seed,
     seedInNetwork = inNetwork[(~inNetwork.index.isin(tblr_seed)) & (~inNetwork.index.isin(tblc_seed))]
 
     # Plot with seed genes
-    ax1.scatter(x=outNetwork['z1'], y=outNetwork['z2'], s=1, color=colour_dict['other'],label='non-network genes')
-    ax1.scatter(x=inNetwork['z1'], y=inNetwork['z2'], s=1, color=colour_nonseed,label='network seed genes')
-    ax1.scatter(x=seedInNetwork['z1'], y=seedInNetwork['z2'], s=1, color=colour_shared,label='network genes')
+    ax1.scatter(x=outNetwork['z1'], y=outNetwork['z2'], s=2, color=colour_dict['other'],label='non-network genes')
+    ax1.scatter(x=inNetwork['z1'], y=inNetwork['z2'], s=2, color=colour_nonseed,label='network seed genes')
+    ax1.scatter(x=seedInNetwork['z1'], y=seedInNetwork['z2'], s=2, color=colour_shared,label='network genes')
     # Set labels and lines for ax1
     ax1.set_xlabel(tblr_label)
     ax1.set_ylabel(tblc_label)
@@ -90,15 +90,14 @@ def plt_scatter_NPS(tblr, tblc, tblr_label, tblc_label, tblr_seed, tblc_seed,
     ax1.axhline(y=0, color='black', linestyle='solid', linewidth=1)
     ax1.legend(loc='center right', bbox_to_anchor=(2.75, 0.5))
 
-    
     # Filter out seed genes
     tbl_z = tbl_z[(~tbl_z.index.isin(tblr_seed)) & (~tbl_z.index.isin(tblc_seed))]
     inNetwork = tbl_z[(tbl_z['z1'] > tblr_lim) & (tbl_z['z2'] > tblc_lim) & (tbl_z['z_comb'] > comb_lim)]
     outNetwork = tbl_z[(tbl_z['z1'] <= tblr_lim) | (tbl_z['z2'] <= tblc_lim) | (tbl_z['z_comb'] <= comb_lim)]
 
     # Plot without seed genes
-    ax2.scatter(x=outNetwork['z1'], y=outNetwork['z2'], s=1, color=colour_dict['other'])
-    ax2.scatter(x=inNetwork['z1'], y=inNetwork['z2'], s=1, color=colour_shared)
+    ax2.scatter(x=outNetwork['z1'], y=outNetwork['z2'], s=2, color=colour_dict['other'])
+    ax2.scatter(x=inNetwork['z1'], y=inNetwork['z2'], s=2, color=colour_shared)
 
     # Set labels and lines for ax2
     ax2.set_xlabel(tblr_label)
@@ -116,6 +115,8 @@ def plt_scatter_NPS(tblr, tblc, tblr_label, tblc_label, tblr_seed, tblc_seed,
     # Save the figure if requested
     if savefig:
         plt.savefig('figures/' + filename + '.svg', bbox_inches='tight')
+        plt.savefig('figures/' + filename + '.png',dpi=600, bbox_inches='tight')
+
 
     # Display the plot
     plt.show()
@@ -321,8 +322,13 @@ def NPS_lineplot(df,metric, filename, xrange=None, yrange=None, savefig=False, s
     if ~(xrange is None):
         ax.set_xlim(xrange)    
     # Set plot labels
-    ax.set_xlabel('NPS combined') 
-    ax.set_ylabel(metric.replace('_',' '))
+    ax.set_xlabel('NPShr')
+    metric_labels={
+        'obs_exp':'obs/exp network size',
+        '-log10(p)':'-log10(p)',
+        'observed_overlap':'network size'
+    }
+    ax.set_ylabel(metric_labels[metric])
     ax.legend(title='NPS single')
     ax.grid(True)
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
@@ -345,17 +351,17 @@ def plot_permutation_histogram(permuted, observed, title="", xlabel="Observed vs
                         edgecolor='w', color=color)
     params = {'mathtext.default': 'regular'}          
     plt.rcParams.update(params)
-    plt.xlabel(xlabel, fontsize=12)
+    plt.xlabel(xlabel, fontsize=8)
     diff = max(observed, max(permuted))-min(permuted)
     plt.arrow(x=observed, y=dfig.dataLim.bounds[3]/2, dx=0, dy=-1 * dfig.dataLim.bounds[3]/2, label="Observed",
               width=diff/100, head_width=diff/15, head_length=dfig.dataLim.bounds[3]/20, overhang=0.5, 
               length_includes_head=True, color=arrow_color, zorder=50)
-    plt.ylabel("Density", fontsize=12)
+    plt.ylabel("Density", fontsize=8)
     plt.legend(fontsize=8, loc=(0.6,0.75))
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.locator_params(axis="y", nbins=6)
-    plt.title(title + " (p=" + str(get_p_from_permutation_results(observed, permuted)) + ")", fontsize=16)
+    plt.title(title + " (p=" + str(get_p_from_permutation_results(observed, permuted)) + ")", fontsize=8)
     
     if savefig:
         plt.savefig('figures/' + filename + '.svg', bbox_inches='tight')

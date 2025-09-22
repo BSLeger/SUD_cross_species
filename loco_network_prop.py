@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# purpose: run network propagation for a given dataset, in this case used for locomotor activity and externalizing.
 import os
 import pandas as pd
 import ndex2
@@ -15,9 +11,10 @@ import random
 #from rca_functions import *
 os.chdir('/tscc/projects/ps-palmer/brittany/SUD_cross_species/scripts')
 from network_functions import *
-#from network_validation_functions import *
+from network_validation_functions import *
 from plotting_functions import *
 os.chdir('/tscc/projects/ps-palmer/brittany/SUD_cross_species/')
+
 
 random_seed=random.seed(211)
 
@@ -37,23 +34,17 @@ else:
     ndex_password = input("Enter your NDEx password: ")
 
 
-# # Interactome Set-up
-
-# pcnet2- versions 
-# from wright et al. 2024 preprint:
-# PCNet 2.0= best-performing ranked composite (top 15 interactomes, 3.85M interactions)
-# PCNet 2.1= top 8 interactomes, 1.75M interactions
-# PCNet 2.2= top 10 co-citation-free interactomes, 3.32M interactions 
-
-
-tissue_network=True
+print(f'value passed={(sys.argv[1])}')
+min_loop=100*int(sys.argv[1])
+max_loop=100*(int(sys.argv[1])+1)
+print(f'{min_loop}: {max_loop}')
+#choose which interactome you want to import
+tissue_network=False
 
 if tissue_network:
-    #tissue='global'
-	tissue=sys.argv[1]
+    tissue='basal_ganglion'
 else:
     interactome_name='PCNet2.0'
-
 
 if not tissue_network:
     interactome=import_interactome(UUIDs=UUIDs,interactome_name=interactome_name)
@@ -94,64 +85,66 @@ else:
     else:
         print('files not found- interactome files must be calculated before continuing')
 
-
-# # calculate gwas NPS
-
 if not tissue_network:
-    seed_dict=import_seed_dict(mag_dir,file_dict,bonf_dict,gene_col_dict,all_nodes)
+    seed_dict=import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,psych_traits,bonf_dict,gene_col_dict,all_nodes)
 else:
     hgnc=pd.read_csv('hgnc_complete_set.txt',sep='\t',low_memory=False)
     hgnc=hgnc[['symbol','entrez_id']].dropna()
     hgnc['entrez_id']=hgnc['entrez_id'].astype(int).astype(str)
-    seed_dict=import_seed_dict(mag_dir,file_dict,bonf_dict,gene_col_dict,hgnc[hgnc.entrez_id.isin(all_nodes)]['symbol']) 
-seed_dict.keys()
+    seed_dict=import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,bonf_dict,gene_col_dict,hgnc[hgnc.entrez_id.isin(all_nodes)]['symbol'])
 
+rat_TWAS_tissue_label={'BLA':'Basolateral amygdala',
+'Brain':'Brain hemisphere',
+'IL':'Infralimbic cortex',
+'LHb':'Lateral habenula',
+'NAcc':'Nucleus accumbens core',
+'NAcc1':'Nucleus accumbens core 1',
+'NAcc2':'Nucleus accumbens core 2',
+'OFC':'Orbitofrontal cortex',
+'PL':'Prelimbic cortex',
+'PL1':'Prelimbic cortex 1',
+'PL2':'Prelimbic cortex 2',
+'Adipose':'Adipose',
+'Eye':'Eye',
+'Liver':'Liver'}
 
-#dictionary of human control traits
-ctrl_dict={}
-ctrl_traits=['facial_hair', 'age_smkinit', 'antisoc', 'friend_sat', 'hr', 'infant_bw', 'LDL', 'maternal_smok', 'townsend', 'age_menarche', 'neurot','addict-rf']
-for t in ctrl_traits:
-    ctrl_dict[t]=pd.read_csv('gwas_ctrl_hm/magma/seed_genes/'+t+'_annot.tsv',sep='\t')
-for t in ctrl_traits:
-    seed_dict[t+'_FDR']=(set(ctrl_dict[t][ctrl_dict[t]['Q']<0.05]['GENE']))
-    seed_dict[t+'_bonf']=(set(ctrl_dict[t][ctrl_dict[t]['P']<0.05/len(ctrl_dict[t])]['GENE']))
-    if not tissue_network:
-        seed_dict[t+'_top500']=set(ctrl_dict[t][(ctrl_dict[t]['GENE'].isin(all_nodes))].nsmallest(500,'P')['GENE'])
-    else:
-        seed_dict[t+'_top500']=set(ctrl_dict[t][(ctrl_dict[t]['GENE'].isin(hgnc[hgnc.entrez_id.isin(all_nodes)]['symbol']))].nsmallest(500,'P')['GENE'])
-
-
+overwrite=True
+prefix='loco_final_CF'
+if not tissue_network: 
+    for t in rat_TWAS_tissue_label.keys():
+        path=f'rat_fusion/output/FUSION_concat/{prefix}_{t}_seed_genes.dat'
+        if os.path.exists(path):
+            tbl=pd.read_csv(path,low_memory=False, sep='\t')
+            seed_dict[f'{prefix.lower()}_{t}_bonf']=set(tbl[tbl['TWAS.P']<0.05/len(tbl)]['HM_ORTHO'].dropna())
+            seed_dict[f'{prefix.lower()}_{t}_FDR']=set(tbl[tbl['Q']<0.05]['HM_ORTHO'].dropna())
+            tbl=tbl[~tbl.HM_ORTHO.isna()]
+            seed_dict[f'{prefix.lower()}_{t}_top500']=set(tbl[tbl['HM_ORTHO'].isin(all_nodes)].nsmallest(500,'TWAS.P')['HM_ORTHO'])
+            print(f'{t} (NORTHO={len(set(tbl.HM_ORTHO))}) BONF: {len(seed_dict[f"{prefix.lower()}_{t}_bonf"])} FDR: {len(seed_dict[f"{prefix.lower()}_{t}_FDR"])} top500: {len(seed_dict[f"{prefix.lower()}_{t}_top500"])}')
+        else:
+           print(f'{path} does not exist')  
 
 if tissue_network:
     seed_dict={k: set(hgnc[hgnc.symbol.isin(v)]['entrez_id']) for k, v in seed_dict.items()}
 
+k='loco_final_cf_FDR'
+n=len(seed_dict['loco_final_cf_FDR'].intersection(all_nodes))
 
-NPS_dict,NPS_dict_series=import_NPS_scores(seed_dict,interactome_name)
 
-overwrite=False
-
-#loop for only subset of traits genes- define ls. otherwise use ls=seed_dict.keys()
-#ls=[i for i in seed_dict.keys() if 'final' in i]
-ls=seed_dict.keys()
-for k in ls:  
-    seed_genes = list(seed_dict[k].intersection(all_nodes))
-    print(f'analyzing {k}')
-    if (len(seed_genes)>0):
-        file_path='network_scores/'+k+'_'+interactome_name+'_zscore.tsv'
-        if ((os.path.exists(file_path))&(overwrite==False)):
-            print('File already exists. If you would like to overwrite this file, set overwrite=True,and rerun')
+print('running propagations')
+for i in range(min_loop,max_loop):
+    seed_genes = random.sample(all_nodes, n)
+    NPSc, Fnew_score, Fnew_rand_score = netprop_zscore.calculate_heat_zscores(
+        w_double_prime,  
+        list(all_nodes),
+        dict(degree), 
+        seed_genes, num_reps=1000,
+        minimum_bin_size=100,
+        random_seed=random_seed)
+    print(NPSc.head())
+    if save_file:
+        file_path=f'network_scores/permuted_control/{k}_permuted_control_{i}_{interactome_name}_zscore.tsv'
+        pd.DataFrame(seed_genes).to_csv(f'network_scores/permuted_control/{k}_permuted_control_{i}_{interactome_name}_seedgenes.tsv',index=False)
+        if ((overwrite==False)&(os.path.exists(file_path))):
+            print('File already exists. If you would like to overwrite this file, set overwrite=True, and rerun')
         else:
-            NPSc, Fnew_score, Fnew_rand_score = netprop_zscore.calculate_heat_zscores(
-                w_double_prime,  
-                list(all_nodes),
-                dict(degree), 
-                seed_genes, num_reps=1000,
-                minimum_bin_size=100,
-                random_seed=random_seed)
-            print(NPSc.head())
-            if save_file:
-                file_path='network_scores/'+k+'_'+interactome_name+'_zscore.tsv'
-                print(f'saving to path: {file_path}')
-                NPSc.to_csv(file_path,sep='\t',header=False)
-    else:
-        print('not enough seed genes for propagation (n=0)')
+            NPSc.to_csv(file_path,sep='\t',header=False)

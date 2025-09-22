@@ -14,17 +14,22 @@
 
 
 # original
-#single run- BMI/BL
+#single run- alzheimer's- uses old human genome
 
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/magma
 
-prefix="magma/nsex"
-gene_loc_file='/tscc/projects/ps-palmer/brittany/magma_v1/NCBI38/NCBI38.gene.loc'
+file='alz'
+prefix="magma/"$file
+#gene_loc_file='/tscc/projects/ps-palmer/brittany/magma_v1/NCBI38/NCBI38.gene.loc'
+gene_loc_file='/tscc/projects/ps-palmer/brittany/magma_v1/NCBI37/NCBI37.3.gene.loc'
+
 suffix=""
-dir='/tscc/projects/ps-palmer/brittany/SUD_cross_species/gwas_ctrl_hm/'
+dir='/tscc/projects/ps-palmer/brittany/SUD_cross_species/gwas_hm_psych/'
 bfile_loc='/tscc/projects/ps-palmer/brittany/magma_v1/g1000_eur/g1000_eur'
 
-/tscc/projects/ps-palmer/brittany/magma_v1/magma --annotate window=10 --snp-loc "${dir}${prefix}_pos.tsv" --gene-loc $gene_loc_file --out $dir$prefix$suffix
+# using single combined table -alz and park
 
-/tscc/projects/ps-palmer/brittany/magma_v1/magma --bfile $bfile_loc --pval "${dir}${prefix}_pval.tsv" ncol=N --gene-annot "${dir}${prefix}${suffix}.genes.annot" --out $dir$prefix$suffix
+/tscc/projects/ps-palmer/brittany/magma_v1/magma --annotate window=10 --snp-loc "${dir}${prefix}_comb.tsv" --gene-loc $gene_loc_file --out $dir$prefix$suffix
 
+
+/tscc/projects/ps-palmer/brittany/magma_v1/magma --bfile $bfile_loc --pval "${dir}${prefix}_comb.tsv" ncol=N --gene-annot "${dir}${prefix}${suffix}.genes.annot" --out $dir$prefix$suffix
