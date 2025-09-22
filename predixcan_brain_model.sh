@@ -11,7 +11,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/predixcan_ext-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 #cd /tscc/projects/ps-palmer/brittany/MetaXcan/GTEx/brain_models/
 db_list=(`ls *.db`) #len=13 change back for rerun all

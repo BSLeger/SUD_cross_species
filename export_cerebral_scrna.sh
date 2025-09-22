@@ -12,7 +12,7 @@
 #SBATCH -e /tscc/projects/ps-palmer/brittany/SUD_cross_species/job_run_out/scRNA_process_cerebral-%j.e  
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH -A csd795    
+#SBATCH -A     
 
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/scripts/
 

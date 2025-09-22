@@ -10,7 +10,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/MAGMA_ext_orig-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 
 # original

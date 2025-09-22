@@ -10,7 +10,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/gwas_cat-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 source activate env-std-py38
 

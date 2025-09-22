@@ -10,7 +10,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/nicsa_common_factor-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 # Modify the paths accordingly
 

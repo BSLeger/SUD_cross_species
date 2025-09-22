@@ -11,7 +11,7 @@
 #SBATCH -e /tscc/projects/ps-palmer/brittany/SUD_cross_species/job_run_out/ext_network_subsampling-%j.e  
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 
 

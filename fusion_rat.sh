@@ -11,7 +11,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/loco_FUSION-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 source activate lzenv
 db_list=( 'Adipose'  'BLA'  'Brain'  'Eye'  'IL'  'LHb'  'Liver'  'NAcc'  'NAcc1'  'NAcc2'  'OFC'  'PL'  'PL1'  'PL2' )

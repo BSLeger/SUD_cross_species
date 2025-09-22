@@ -12,7 +12,7 @@
 #SBATCH -e /tscc/projects/ps-palmer/brittany/SUD_cross_species/job_run_out/nicsa_gwasreport_PCA_run2-%j.e  
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH -A csd795    
+#SBATCH -A     
 
 source activate gwas
 cd /tscc/projects/ps-palmer/gwas/GWAS-pipeline

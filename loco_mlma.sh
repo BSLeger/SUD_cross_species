@@ -11,7 +11,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/job_run_out/mlma_loco_7k_model-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 
 ((CHR = SLURM_ARRAY_TASK_ID))

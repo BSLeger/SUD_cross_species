@@ -10,7 +10,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/SUD_cross_species/magma_ext-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 
 cd /tscc/projects/ps-palmer/brittany/SUD_cross_species/magma

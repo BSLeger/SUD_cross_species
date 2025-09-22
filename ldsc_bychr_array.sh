@@ -11,7 +11,7 @@
 #SBATCH -e /tscc/nfs/home/bsleger/bsl/nicsa_ldsc-%j.e
 #SBATCH --mail-type END,FAIL
 #SBATCH --mail-user bsleger@ucsd.edu
-#SBATCH --account csd795
+#SBATCH --account 
 
 # Modify the paths accordingly
 
