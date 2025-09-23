@@ -11,10 +11,7 @@ UUIDs={
 'PCNet2.2': '8b4b54fa-e87d-11ee-9621-005056ae23aa',
 'HumanNetv3FN':'40913318-3a9c-11ed-ac45-0ac135e8bacf',
 'HumanNetv3XC':'8f929fb5-3ac6-11ed-b7d0-0ac135e8bacf',
-'STRING':'5f5da339-f14a-11ee-9621-005056ae23aa',
-'signor_rat': '76be57cd-afe8-11e9-8bb4-0ac135e8bacf',
-'signor_human': '523fff27-afe8-11e9-8bb4-0ac135e8bacf',
-'signor_mouse': '656370fa-afe8-11e9-8bb4-0ac135e8bacf',
+'STRING':'5f5da339-f14a-11ee-9621-005056ae23aa'
 }
 
 ctrl_traits=['facial_hair', 'age_smkinit', 'antisoc', 'hr', 'infant_bw', 'LDL', 'maternal_smok', 'age_menarche','addict-rf','adhd', 'dpw', 'risk', 'auto_speed', 'nsex', 'bmi', 'height']
@@ -29,48 +26,20 @@ ctrl_mag_dir='gwas_ctrl_hm/magma/seed_genes/'
 psych_mag_dir='gwas_hm_psych/magma/seed_genes/'
 
 file_dict={
-    'loco':mag_dir+'loco_win10_annot.tsv',
-    'loco_gsem':mag_dir+'loco_gsem_annot.tsv',
     'ext':mag_dir+'ext_orig_annot.tsv',
     'ext_st22':mag_dir+'all_tests_ext1_st22_genes.csv',
-    'loco_mega_fus_naac':'loco_twas_dan/loco_fusion_NACC_seed.tsv',
-    'ext_fus_naac':'ext_FUSION/ext_fusion_NACC_seed.tsv',
-	'loco_final_cf':mag_dir+'loco_final_cf_win10_annot.tsv',
-	'loco_final_mega':mag_dir+'loco_final_mega_win10_annot.tsv',
-	'ext_rat':mag_dir+'ext_orig_annot_rat_ortho.tsv',
-	'loco_final_cf_rat':mag_dir+'loco_final_cf_win10_annot.tsv',
-	'ext_db':'ext_2factor/MAGMA_v108_DB_bonf.tsv',
-	'ext_rtb':'ext_2factor/MAGMA_v108_RTB_bonf.tsv',
-	'loco_final_cf_25':mag_dir+'loco_final_cf_win25_annot.tsv'
-	
+	'loco_final_cf':mag_dir+'loco_final_cf_win10_annot.tsv'	
 }
 bonf_dict={
-    'loco_gsem':2.650129856362962e-06,
-    'loco':2.6389402016150313e-06,
-	'loco_mega_fus_naac':9.338812103100487e-06,
 	'loco_final_cf':2.635601707869907e-06,
-	'loco_final_mega':2.6467630088401888e-06,
-	'ext_rat':2.7003672499459928e-06,
-	'ext_db':2.75e-06,
-	'ext_rtb':2.75e-06,
-	'loco_final_cf_25':2.6467630088401888e-06,
 	'body_length_rn6':2.8370403994552885e-06,
 	'bmi_rn6':2.8370403994552885e-06
 }
 gene_col_dict={
     'loco':'HM_ORTHO',
-    'loco_gsem':'HM_ORTHO',
-	'loco_mega_fus_naac':'human_ortholog',
     'ext':'GENE',
-	'ext_fus_naac':'ID',
 	'ext_st22':'GENE NAME',
 	'loco_final_cf':'HM_ORTHO',
-	'loco_final_mega':'HM_ORTHO',
-	'loco_final_cf_rat':'GENE',
-	'ext_rat':'Gene1Symbol',
-	'ext_db':'Gene symbol',
-	'ext_rtb':'Gene symbol',
-	'loco_final_cf_25':'HM_ORTHO',
 	'hm_ctrl':'GENE',
 	'rat_ctrl':'HM_ORTHO'
 }
@@ -87,24 +56,6 @@ cut_hm_specific={
     'zh':3,
     'zhr':0
 }
-#from the original tissue dictionary
-rat_TWAS_tissue_label={'BLA':'Basolateral amygdala',
-'Brain':'Brain hemisphere',
-'IL':'Infralimbic cortex',
-'LHb':'Lateral habenula',
-'NAcc':'Nucleus accumbens core',
-'NAcc1':'Nucleus accumbens core 1',
-'NAcc2':'Nucleus accumbens core 2',
-'OFC':'Orbitofrontal cortex',
-'PL':'Prelimbic cortex',
-'PL1':'Prelimbic cortex 1',
-'PL2':'Prelimbic cortex 2',
-'Adipose':'Adipose',
-'Eye':'Eye',
-'Liver':'Liver',
-'AC':'Nucleus accumbens core',
-'LH':'Lateral habenula',
-'VO':'Orbitofrontal cortex'}
 
 def import_interactome(interactome_name=None, UUIDs=UUIDs,ndex_user=None, ndex_password=None, UUID=None):
     """
@@ -165,41 +116,21 @@ def import_interactome(interactome_name=None, UUIDs=UUIDs,ndex_user=None, ndex_p
 
     else:
         print('UUID/interactome name not provided- please provide either to import interactome.')
-
-
-def import_seedgenes(path,pcol='P',gene_col='GENE NAME',delim='comma', cutoff=None):
-    if delim=='comma':
-        df=pd.read_csv(path,sep=',')
-    else:
-        df=pd.read_csv(path,sep='\t')
-    if pcol==None:
-        print('pvalue column not specified- all genes will be used')
-        cutoff=None
-    if cutoff=='bonferroni':
-        df=df[df[pcol]<0.05/len(df)]
-    elif cutoff=='FDR_05':
-        df=df[df[pcol]<0.05]
-    else:
-        print('cutoff not defined/custom- using all genes ')
-        df=df
-    print(df.head())
-    return(df)
-
-
-
 def import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,psych_traits,bonf_dict,gene_col_dict,all_nodes):
-    #written for MAGMA output- need to rewrite for fusion or ratXcan
+    '''
+    function to import the (previously calculated) seed genes for all traits being analyzed.
+    
+    '''
+    #written for MAGMA output
     seed_dict={}
     for f in file_dict.keys():
         t=pd.read_csv(file_dict[f],sep='\t')
         gene_col=gene_col_dict[f]
-        #print('successfully read in file')
-        #print(t.head())
+
         if f in bonf_dict.keys():
             bonf_cutoff=bonf_dict[f]
         else:
             bonf_cutoff=0.05/len(t)
-        #print(f'bonferroni cuttoff ={bonf_cutoff}')
         if ('fus' in f):
             Pcol='TWAS.P'
         else:
@@ -235,26 +166,6 @@ def import_seed_dict(mag_dir,file_dict,ctrl_traits,ctrl_traits_rat,psych_traits,
 
     return seed_dict
 
-
-'''def import_NPS_scores(seed_dict,UUIDs):
-    NPS_dict_series={}
-    for k in seed_dict.keys():
-        for u in UUIDs.keys():
-            p=('network_scores/'+k+'_'+u+'_zscore.tsv')
-            if os.path.isfile(p):
-                t=pd.read_csv('network_scores/'+k+'_'+u+'_zscore.tsv',header=None, sep='\t')
-                t.index=t[0]
-                t=t.drop(columns=[0])
-                #t=t[1].squeeze()
-                #t = pd.DataFrame({'z':t})
-                NPS_dict_series[k+'_'+u]=t
-    NPS_dict={}
-    for k in NPS_dict_series.keys():
-        t=NPS_dict_series[k]
-        t=t[1].squeeze()
-        t = pd.DataFrame({'z':t})
-        NPS_dict[k]=t
-    return NPS_dict, NPS_dict_series'''
 def import_NPS_scores(seed_dict,interactome_name):
     NPS_dict_series={}
     for k in seed_dict.keys():
@@ -275,6 +186,24 @@ def import_NPS_scores(seed_dict,interactome_name):
     return NPS_dict, NPS_dict_series
 
 def return_analysis_datasets(trait_r,cut_r,trait_h,cut_h,seed_dict,NPS_dict,interactome_name):
+	'''
+	function to import the netcoloc datasets for colocalizing locomotor activity trait with human traits.
+	trait_r (string): the name of the rat trait being colocalized. must be a trait listed in keys in seed_dict
+	trait_h (string): the name of the human trait being colocalized. must be a traot listed in keys in seed_dict
+	cut_r (string): significance threshold used to define seed genes from trait_r. f"{trait_r}_{cut_r}" must be a key in the seed_dict.
+	cut_h (string): significance threshold used to define seed genes from trait_r. f"{trait_h}_{cut_h}" must be a key in the seed_dict.
+    seed_dict (dict): dictionary lists that maps the combination of trait name and significance threshold with the seed genes from that trait. defined using the import_seed_dict function.
+    NPS_dict: dictionary lists that maps the combination of trait name and significance threshold with the network proximity scores (NPS) from that trait in a given interactome (defined by interactome name). defined using the import_NPS_scores function.
+    
+    Returns:
+        label_h (string): label for human trait (f"{trait_h}_{cut_h}")
+        label_r (string): label for rat trait (f"{trait_r}_{cut_r}")
+        seed_h (set): set of seed genes from human trait
+        seed_r (set): set of seed genes from rat trait
+        NPS_h (pd.DataFrame): dataframe of the human NPSs 
+        NPS_r (pd.DataFrame): dataframe of the rat NPSs
+        NPS (pd.DataFrame): dataframe of the human NPSh, rat NPSr, and combined NPShr
+    '''
     #labels
 	if not (trait_h==None):
 	    if cut_h==None:
@@ -312,7 +241,7 @@ def return_analysis_datasets(trait_r,cut_r,trait_h,cut_h,seed_dict,NPS_dict,inte
 	else:
 	    NPS=None
 	return label_h,label_r,seed_h,seed_r,NPS_h,NPS_r,NPS
-	
+
 def format_network(network, traitr, traitc, seedr, seedc,zr, zc):
     """
     Formats the colocalized network for easy secondary analysis in Cytoscape
@@ -481,3 +410,4 @@ def get_expanded_network_gene_fractions(hier_df, hm_genes, rat_genes, coloc_gene
     counts=pd.concat([a,b,c,d], axis=1)
     fracs=counts.div(counts.CD_MemberList, axis=0)    
     return fracs
+
